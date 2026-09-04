@@ -1,0 +1,226 @@
+/*
+	Stilfundament der Anwendung (F-01 · features/F-01-projektgeruest.md, Abschnitt
+	„Farbtafeln und Token").
+
+	Die Token-Blöcke (:root und :root[data-theme="dark"]) sind wortgleich aus
+	design/03-seekarte.html übernommen und ab hier die einzige Farbquelle der Anwendung
+	(features/README.md, verbindliche Konvention 1: keine Farben außerhalb dieser Datei).
+	Weitere Features dürfen eigene Klassen ergänzen, aber keine Token umbenennen oder ihre
+	Werte ändern.
+*/
+
+/* ── Tagtafel ─────────────────────────────────────── */
+:root {
+	--paper: #fafaf6;
+	--paper-2: #f3f3ec;
+	--hover: #f3f3ec;
+	--shallow: #dcebe6; /* Quick Wins */
+	--deep: #c5dde5; /* Große Vorhaben */
+	--flat: #eff1ea; /* Nebenbei */
+	--hazard: #f0e3c6; /* Vermeiden */
+	--ink: #22333b;
+	--ink-soft: #5f7681;
+	--hair: #c9d2cf;
+	--rule: #22333b;
+	--grid: #d8ded8;
+	--region: #8aa0a4;
+	--magenta: #b01777; /* Vorsicht: schließt aus */
+	--sea: #3b7c8a; /* hängt zusammen */
+	--hatch-opacity: 0.14;
+}
+
+/* ── Nachttafel ───────────────────────────────────── */
+:root[data-theme='dark'] {
+	--paper: #0d161a;
+	--paper-2: #080f12;
+	--hover: #16242a;
+	--shallow: #132a2b;
+	--deep: #14303b;
+	--flat: #111a1d;
+	--hazard: #211c13;
+	--ink: #dce8e6;
+	--ink-soft: #8da3a7;
+	--hair: #26383c;
+	--rule: #41585d;
+	--grid: #1c2b2e;
+	--region: #4c666a;
+	--magenta: #e4609f;
+	--sea: #68bcc7;
+	--hatch-opacity: 0.13;
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	height: 100%;
+}
+
+body {
+	margin: 0;
+	background: var(--paper-2);
+	color: var(--ink);
+	font-family: 'Karla', system-ui, sans-serif;
+	font-size: 14px;
+	line-height: 1.5;
+	-webkit-font-smoothing: antialiased;
+}
+
+button {
+	font: inherit;
+	color: inherit;
+}
+
+/* Kennungen, Zahlenpaare und Lotungen. */
+.mono {
+	font-family: 'Azeret Mono', ui-monospace, monospace;
+	font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+	outline: 2px solid var(--magenta);
+	outline-offset: 2px;
+}
+
+/* Dreiteiliges Grundgerüst: Kopfband, Kartenfläche, Fußleiste. */
+.app {
+	height: 100%;
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+/* ── Kopfband ─────────────────────────────────────── */
+.ribbon {
+	background: var(--paper);
+	border-bottom: 3px double var(--rule);
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	padding: 0 20px;
+	height: 60px;
+}
+.title {
+	display: flex;
+	flex-direction: column;
+	line-height: 1.1;
+	padding-right: 18px;
+	margin-right: 2px;
+	border-right: 1px solid var(--hair);
+}
+.title b {
+	font-family: 'Fraunces', serif;
+	font-weight: 600;
+	font-size: 19px;
+	letter-spacing: 0.01em;
+	font-variation-settings:
+		'SOFT' 20,
+		'WONK' 1;
+}
+.title span {
+	font-size: 10.5px;
+	letter-spacing: 0.22em;
+	text-transform: uppercase;
+	color: var(--ink-soft);
+	margin-top: 2px;
+}
+.scope {
+	margin-left: auto;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	font-size: 12px;
+	color: var(--ink-soft);
+}
+.scope .lbl {
+	letter-spacing: 0.02em;
+}
+
+.btn {
+	background: transparent;
+	border: 1px solid transparent;
+	padding: 7px 11px;
+	font-size: 13.5px;
+	cursor: pointer;
+	border-radius: 0;
+}
+.btn:hover {
+	background: var(--hover);
+	border-color: var(--hair);
+}
+.btn.pri {
+	border: 1px solid var(--ink);
+	background: var(--ink);
+	color: var(--paper);
+	font-weight: 600;
+}
+.btn.pri:hover {
+	background: var(--ink);
+	opacity: 0.86;
+}
+
+.sw {
+	display: flex;
+	border: 1px solid var(--hair);
+}
+.sw button {
+	background: transparent;
+	border: 0;
+	padding: 6px 11px;
+	font-size: 12px;
+	cursor: pointer;
+	color: var(--ink-soft);
+}
+.sw button[aria-pressed='true'] {
+	background: var(--ink);
+	color: var(--paper);
+}
+
+/* ── Karte ────────────────────────────────────────── */
+.chart {
+	position: relative;
+	background: var(--paper);
+	overflow: hidden;
+}
+
+/* ── Kartuschen ───────────────────────────────────── */
+.cartouche {
+	background: var(--paper);
+	border: 1px solid var(--rule);
+	box-shadow:
+		0 0 0 3px var(--paper),
+		0 0 0 4px var(--hair);
+}
+
+/* ── Fußleiste ────────────────────────────────────── */
+.foot {
+	display: flex;
+	align-items: center;
+	gap: 22px;
+	height: 36px;
+	padding: 0 20px;
+	background: var(--paper);
+	border-top: 3px double var(--rule);
+	font-size: 11.5px;
+	letter-spacing: 0.06em;
+	color: var(--ink-soft);
+}
+.foot .r {
+	margin-left: auto;
+	font-family: 'Fraunces', serif;
+	font-style: italic;
+	letter-spacing: 0.14em;
+}
+
+/* ── Kopfband auf schmalen Fenstern (design/03-seekarte.html, @media max-width:768px) ── */
+@media (max-width: 768px) {
+	.title span {
+		display: none;
+	}
+	.scope {
+		margin-left: 0;
+	}
+}
