@@ -214,3 +214,13 @@ button {
 	font-style: italic;
 	letter-spacing: 0.14em;
 }
+
+/* ── Kopfband auf schmalen Fenstern (design/03-seekarte.html, @media max-width:768px) ── */
+@media (max-width: 768px) {
+	.title span {
+		display: none;
+	}
+	.scope {
+		margin-left: 0;
+	}
+}

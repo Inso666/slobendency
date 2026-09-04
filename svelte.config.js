@@ -12,7 +12,16 @@ const config = {
 			fallback: undefined,
 			precompress: false,
 			strict: true
-		})
+		}),
+		// Content-Security-Policy ohne unsafe-inline für Skripte (NFR-24). Bei statisch
+		// vorgerenderten Seiten ohne Server trägt SvelteKit den Hash des einzigen Inline-
+		// Bootstrap-Skripts in ein <meta http-equiv> ein, statt ihn pauschal zu erlauben.
+		csp: {
+			mode: 'hash',
+			directives: {
+				'script-src': ['self']
+			}
+		}
 	}
 };
 
