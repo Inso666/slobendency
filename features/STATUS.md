@@ -7,7 +7,7 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | # | Feature | Zustand | Branch | Anmerkung |
 |---|---|---|---|---|
 | F-01 | Projektgerüst und Kartentafel | fertig | — | gemergt 05.09. 00:05 |
-| F-02 | Domänenmodell und Invarianten | in Tests | feature/F-02-domaenenmodell | Test-Agent beauftragt |
+| F-02 | Domänenmodell und Invarianten | in QA | feature/F-02-domaenenmodell | 66 Tests grün (18b93b5) |
 | F-03 | Kartenstore und Kommandos | offen | — | — |
 | F-04 | Persistenz im LocalStorage | offen | — | — |
 | F-05 | DSL-Parser | offen | — | — |
