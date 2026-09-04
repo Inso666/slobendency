@@ -22,5 +22,6 @@ export const connectSource: Writable<FeatureId | null> = writable(null);
 
 /** Hebt Selektion und einen laufenden Verbindungsvorgang auf (PRD FR-13, FR-46). */
 export function clearSelection(): void {
-	throw new Error('not implemented');
+	selectedId.set(null);
+	connectSource.set(null);
 }
