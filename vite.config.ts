@@ -13,7 +13,9 @@ export default defineConfig({
 		coverage: {
 			provider: 'v8',
 			reporter: ['text', 'html'],
-			include: ['src/lib/dsl/**', 'src/lib/graph/**']
+			// dsl/ und graph/ nach NFR-41; model/ zusätzlich nach der Zielabdeckung aus
+			// features/F-02-domaenenmodell.md, Abschnitt „Tests".
+			include: ['src/lib/dsl/**', 'src/lib/graph/**', 'src/lib/model/**']
 		}
 	}
 });
