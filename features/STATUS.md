@@ -6,8 +6,8 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 
 | # | Feature | Zustand | Branch | Anmerkung |
 |---|---|---|---|---|
-| F-01 | Projektgerüst und Kartentafel | in QA | feature/F-01-projektgeruest | 13 Tests grün (eb8218f) |
-| F-02 | Domänenmodell und Invarianten | offen | — | — |
+| F-01 | Projektgerüst und Kartentafel | fertig | — | gemergt 05.09. 00:05 |
+| F-02 | Domänenmodell und Invarianten | in Tests | feature/F-02-domaenenmodell | Test-Agent beauftragt |
 | F-03 | Kartenstore und Kommandos | offen | — | — |
 | F-04 | Persistenz im LocalStorage | offen | — | — |
 | F-05 | DSL-Parser | offen | — | — |
@@ -37,4 +37,4 @@ nächste Session anfängt.
 
 | Datum | Start | Erledigt | Nächster Schritt |
 |---|---|---|---|
-| — | — | — | Test-Agent für F-01 beauftragen |
+| 04.–05.09. | manuell | Ausgangslage committet, Weckzyklus gestartet, F-01 durch Tests, Umsetzung, QA und Merge gebracht (2 QA-Befunde behoben: fehlende CSP, Kopfband-Anordnung unter 768 px). | F-02 durch Tests, Umsetzung und QA bringen. |
