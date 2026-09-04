@@ -6,7 +6,7 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 
 | # | Feature | Zustand | Branch | Anmerkung |
 |---|---|---|---|---|
-| F-01 | Projektgerüst und Kartentafel | offen | — | — |
+| F-01 | Projektgerüst und Kartentafel | in Arbeit | feature/F-01-projektgeruest | 13 Tests rot (32602bc) |
 | F-02 | Domänenmodell und Invarianten | offen | — | — |
 | F-03 | Kartenstore und Kommandos | offen | — | — |
 | F-04 | Persistenz im LocalStorage | offen | — | — |
