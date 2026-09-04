@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Feature Map – Entwurf 1: Plotter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --film:#D6DED8;        /* Zeichenfolie */
+    --sheet:#EDF1EA;       /* Plotblatt */
+    --sheet-edge:#C3CDC5;
+    --ink:#16211C;
+    --graphite:#6A7A72;
+    --grid:#C7D1C9;
+    --pen-magenta:#C10E6B; /* requires */
+    --pen-cyan:#00768F;    /* relates  */
+    --pen-orange:#CC5115;  /* excludes / Warnung */
+    --r:2px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:var(--film);color:var(--ink);
+    font-family:"Public Sans",system-ui,sans-serif;font-size:14px;line-height:1.45;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:"Spline Sans Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  button{font:inherit;color:inherit}
+  :focus-visible{outline:2px solid var(--pen-magenta);outline-offset:2px}
+
+  .app{height:100%;display:grid;grid-template-rows:auto 1fr auto}
+
+  /* ── Instrumentenleiste ───────────────────────────── */
+  .bar{
+    display:flex;align-items:center;gap:18px;
+    padding:0 16px;height:52px;
+    background:var(--film);border-bottom:1px solid var(--ink);
+  }
+  .brand{display:flex;align-items:center;gap:10px;padding-right:18px;border-right:1px solid var(--sheet-edge);height:100%}
+  .brand b{
+    font-family:"Archivo",sans-serif;font-weight:700;font-size:15px;
+    letter-spacing:-.02em;text-transform:uppercase;
+  }
+  .brand span{font-size:11px;letter-spacing:.14em;color:var(--graphite);text-transform:uppercase}
+  .tools{display:flex;align-items:center;gap:6px;flex:1;flex-wrap:wrap}
+  .btn{
+    background:transparent;border:1px solid transparent;border-radius:var(--r);
+    padding:6px 10px;cursor:pointer;font-size:13px;
+  }
+  .btn:hover{background:var(--sheet)}
+  .btn.pri{border-color:var(--ink);background:var(--ink);color:var(--sheet);font-weight:600}
+  .btn.pri:hover{background:#0B120E}
+  .sep{width:1px;height:20px;background:var(--sheet-edge);margin:0 6px}
+  .switch{display:flex;align-items:center;margin-left:auto;border:1px solid var(--sheet-edge);border-radius:var(--r);overflow:hidden}
+  .switch button{background:transparent;border:0;padding:5px 11px;font-size:12px;cursor:pointer;color:var(--graphite)}
+  .switch button[aria-pressed="true"]{background:var(--ink);color:var(--sheet)}
+
+  /* ── Bühne ────────────────────────────────────────── */
+  .stage{position:relative;padding:18px;overflow:hidden}
+  .sheet{
+    position:relative;height:100%;background:var(--sheet);
+    border:1px solid var(--ink);
+  }
+  /* Passermarken an den Ecken */
+  .sheet::before,.sheet::after{
+    content:"";position:absolute;width:11px;height:11px;pointer-events:none;
+    border:1px solid var(--graphite);
+  }
+  .sheet::before{top:7px;left:7px;border-right:0;border-bottom:0}
+  .sheet::after{bottom:7px;right:7px;border-left:0;border-top:0}
+  .sheet svg.map{display:block;width:100%;height:100%}
+
+  /* ── Schublade Featureliste ───────────────────────── */
+  .drawer{
+    position:absolute;z-index:5;top:18px;bottom:18px;left:18px;width:300px;
+    background:var(--sheet);border:1px solid var(--ink);
+    display:flex;flex-direction:column;
+    box-shadow:14px 0 0 -13px var(--graphite);
+  }
+  .drawer h2{
+    margin:0;padding:11px 13px;font-family:"Archivo",sans-serif;font-size:11px;
+    letter-spacing:.16em;text-transform:uppercase;border-bottom:1px solid var(--ink);
+    display:flex;justify-content:space-between;align-items:center;font-weight:600;
+  }
+  .drawer h2 span{color:var(--graphite);letter-spacing:.06em}
+  .filter{padding:10px 13px;border-bottom:1px solid var(--sheet-edge)}
+  .filter input{
+    width:100%;border:1px solid var(--sheet-edge);border-radius:var(--r);
+    padding:6px 8px;font:inherit;font-size:13px;background:transparent;color:inherit;
+  }
+  .filter input::placeholder{color:var(--graphite)}
+  .cols{
+    display:grid;grid-template-columns:1fr 34px 34px;gap:8px;
+    padding:7px 13px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--graphite);border-bottom:1px solid var(--sheet-edge);
+  }
+  .cols i{font-style:normal;text-align:right}
+  .rows{overflow:auto;flex:1}
+  .row{
+    display:grid;grid-template-columns:1fr 34px 34px;gap:8px;align-items:baseline;
+    padding:8px 13px;border-bottom:1px solid var(--grid);cursor:pointer;
+  }
+  .row:hover{background:#E3E9E1}
+  .row.on{background:var(--ink);color:var(--sheet)}
+  .row.on .id{color:#A9B8AF}
+  .row b{font-weight:500}
+  .row .id{display:block;font-size:11px;color:var(--graphite)}
+  .row .n{text-align:right;font-size:13px}
+
+  /* ── Ablesefenster (Tooltip) ──────────────────────── */
+  .readout{
+    position:absolute;z-index:6;top:96px;right:52px;width:296px;
+    background:var(--sheet);border:1px solid var(--ink);
+  }
+  .readout header{padding:11px 13px 9px;border-bottom:1px solid var(--ink)}
+  .readout h3{margin:0;font-family:"Archivo",sans-serif;font-size:17px;letter-spacing:-.015em}
+  .readout .id{font-size:11.5px;color:var(--graphite);letter-spacing:.04em}
+  .vals{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--sheet-edge)}
+  .val{padding:9px 13px}
+  .val + .val{border-left:1px solid var(--sheet-edge)}
+  .val u{display:block;text-decoration:none;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--graphite)}
+  .val strong{font-size:22px;font-weight:500;letter-spacing:-.02em}
+  .rel{padding:10px 13px;border-bottom:1px solid var(--sheet-edge)}
+  .rel h4{margin:0 0 7px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--graphite);font-weight:600}
+  .rel ul{margin:0;padding:0}
+  .rel li{list-style:none;display:flex;gap:8px;align-items:baseline;padding:3px 0;font-size:12.5px}
+  .rel .glyph{width:30px;flex:none;font-size:12px}
+  .g-req{color:var(--pen-magenta)}
+  .g-rel{color:var(--pen-cyan)}
+  .g-exc{color:var(--pen-orange)}
+  .rel small{color:var(--graphite)}
+  .acts{display:flex;flex-wrap:wrap;gap:6px;padding:10px 13px}
+  .acts button{
+    border:1px solid var(--sheet-edge);background:transparent;border-radius:var(--r);
+    padding:5px 9px;font-size:12px;cursor:pointer;
+  }
+  .acts button:hover{border-color:var(--ink)}
+  .acts .del{color:var(--pen-orange)}
+
+  /* ── Zeichenerklärung ─────────────────────────────── */
+  .key{
+    position:absolute;z-index:4;left:334px;bottom:26px;
+    display:flex;gap:16px;align-items:center;flex-wrap:wrap;
+    padding:7px 11px;background:rgba(237,241,234,.92);border:1px solid var(--sheet-edge);
+    font-size:11.5px;color:var(--graphite);
+  }
+  .key i{font-style:normal;color:var(--ink)}
+  .key svg{width:38px;height:10px;vertical-align:middle}
+
+  /* ── Statuszeile ──────────────────────────────────── */
+  .status{
+    display:flex;align-items:center;gap:20px;height:34px;padding:0 18px;
+    border-top:1px solid var(--ink);font-size:12px;color:var(--graphite);
+  }
+  .status .coord{margin-left:auto;color:var(--ink);letter-spacing:.06em}
+  .status .warn{color:var(--graphite)}
+  .dot{width:5px;height:5px;border-radius:50%;background:var(--pen-cyan);display:inline-block;margin-right:6px;vertical-align:middle}
+
+  /* ── SVG-Sprache ──────────────────────────────────── */
+  .grid-line{stroke:var(--grid);stroke-width:1}
+  .axis{stroke:var(--ink);stroke-width:1}
+  .tick{stroke:var(--ink);stroke-width:1}
+  .tick-lbl{font-family:"Spline Sans Mono",monospace;font-size:10.5px;fill:var(--graphite)}
+  .axis-lbl{font-family:"Archivo",sans-serif;font-size:10.5px;letter-spacing:.18em;fill:var(--graphite)}
+  .quad{font-family:"Archivo",sans-serif;font-size:11px;letter-spacing:.2em;fill:#9AA8A0}
+  .divider{stroke:var(--graphite);stroke-width:1;stroke-dasharray:1 5}
+  .node circle{fill:var(--sheet);stroke:var(--ink);stroke-width:1.5}
+  .node text{font-size:13px;fill:var(--ink);font-family:"Public Sans",sans-serif;
+    paint-order:stroke;stroke:var(--sheet);stroke-width:3.5px;stroke-linejoin:round}
+  .node .sub{font-family:"Spline Sans Mono",monospace;font-size:10.5px;fill:var(--graphite)}
+  .dim{opacity:.16}
+  .edge{fill:none;stroke-width:1.5}
+  .e-req{stroke:var(--pen-magenta)}
+  .e-rel{stroke:var(--pen-cyan);stroke-dasharray:5 4}
+  .e-exc{stroke:var(--pen-orange)}
+  .edge-lbl{font-size:11px;fill:var(--graphite);font-family:"Public Sans",sans-serif;
+    paint-order:stroke;stroke:var(--sheet);stroke-width:4px;stroke-linejoin:round}
+  .ring{fill:none;stroke:var(--pen-magenta);stroke-width:1;stroke-dasharray:2 3}
+  .sel circle{stroke-width:3}
+  .strike{stroke:var(--pen-orange);stroke-width:1.5}
+  .anchor{stroke:var(--graphite);stroke-width:1;opacity:.6}
+  .cross{stroke:var(--ink);stroke-width:1;stroke-dasharray:2 3}
+  .readbox{fill:var(--ink)}
+  .readtxt{font-family:"Spline Sans Mono",monospace;font-size:11px;fill:var(--sheet)}
+
+  /* Plotterlauf beim Laden */
+  @keyframes draw{from{stroke-dashoffset:var(--len)}to{stroke-dashoffset:0}}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .edges .e-req,.edges .e-exc{stroke-dasharray:var(--len);animation:draw .9s cubic-bezier(.6,0,.2,1) both}
+  .nodes .node{animation:fade .4s both;animation-delay:.5s}
+  @media (prefers-reduced-motion:reduce){
+    .edges .e-req,.edges .e-exc{animation:none;stroke-dasharray:none}
+    .nodes .node{animation:none}
+  }
+
+  @media (max-width:1080px){
+    .drawer{width:260px}
+    .readout{top:auto;bottom:18px;right:18px;left:auto;width:280px}
+    .key{display:none}
+  }
+  @media (max-width:768px){
+    .stage{padding:0}
+    .sheet{border-left:0;border-right:0}
+    .drawer{display:none}
+    .brand span{display:none}
+    .switch{margin-left:0}
+    .readout{left:0;right:0;bottom:0;width:auto;border-left:0;border-right:0;border-bottom:0}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="bar">
+    <div class="brand"><b>Feature&nbsp;Map</b><span>Blatt 01</span></div>
+    <div class="tools">
+      <button class="btn pri">+ Feature</button>
+      <span class="sep"></span>
+      <button class="btn">Importieren</button>
+      <button class="btn">Exportieren ▾</button>
+      <span class="sep"></span>
+      <button class="btn">Ansicht ▾</button>
+      <div class="switch" role="group" aria-label="Hervorhebung">
+        <button aria-pressed="false">Nur direkte</button>
+        <button aria-pressed="true">Transitiv</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="stage">
+
+    <aside class="drawer">
+      <h2>Features <span class="mono">14</span></h2>
+      <div class="filter"><input placeholder="Nach Label oder ID filtern" aria-label="Features filtern"></div>
+      <div class="cols"><span>Label · ID</span><i>Imp</i><i>Eff</i></div>
+      <div class="rows">
+        <div class="row"><span><b>Audit-Log</b><span class="id mono">audit</span></span><span class="n mono">5</span><span class="n mono">5</span></div>
+        <div class="row"><span><b>Basic Auth</b><span class="id mono">legacy-auth</span></span><span class="n mono">2</span><span class="n mono">1</span></div>
+        <div class="row"><span><b>Benachrichtigungen</b><span class="id mono">benachr</span></span><span class="n mono">3</span><span class="n mono">5</span></div>
+        <div class="row"><span><b>Benutzer-Login</b><span class="id mono">login</span></span><span class="n mono">8</span><span class="n mono">3</span></div>
+        <div class="row"><span><b>CSV-Import</b><span class="id mono">import</span></span><span class="n mono">5</span><span class="n mono">2</span></div>
+        <div class="row"><span><b>Dark Mode</b><span class="id mono">dark</span></span><span class="n mono">2</span><span class="n mono">3</span></div>
+        <div class="row"><span><b>Gastzugang</b><span class="id mono">gast</span></span><span class="n mono">3</span><span class="n mono">2</span></div>
+        <div class="row"><span><b>Kennzahlen-Dashboard</b><span class="id mono">dashboard</span></span><span class="n mono">13</span><span class="n mono">13</span></div>
+        <div class="row"><span><b>Mobile Ansicht</b><span class="id mono">mobil</span></span><span class="n mono">13</span><span class="n mono">5</span></div>
+        <div class="row"><span><b>Öffentliche API</b><span class="id mono">api</span></span><span class="n mono">8</span><span class="n mono">21</span></div>
+        <div class="row"><span><b>PDF-Export</b><span class="id mono">export</span></span><span class="n mono">3</span><span class="n mono">2</span></div>
+        <div class="row on"><span><b>Rollen &amp; Rechte</b><span class="id mono">rollen</span></span><span class="n mono">13</span><span class="n mono">8</span></div>
+        <div class="row"><span><b>Single Sign-On</b><span class="id mono">sso</span></span><span class="n mono">5</span><span class="n mono">13</span></div>
+        <div class="row"><span><b>Volltextsuche</b><span class="id mono">suche</span></span><span class="n mono">8</span><span class="n mono">8</span></div>
+      </div>
+    </aside>
+
+    <div class="sheet">
+      <svg class="map" viewBox="0 0 1000 700" role="img" aria-label="Streudiagramm: Effort waagerecht, Impact senkrecht">
+        <defs>
+          <marker id="arrowM" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 4 L0 8 Z" fill="#C10E6B"/>
+          </marker>
+          <marker id="arrowC" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 4 L0 8 Z" fill="#00768F"/>
+          </marker>
+        </defs>
+
+        <!-- Fibonacci-Raster: Gitterlinien nur auf zulässigen Schätzwerten -->
+        <g class="grid">
+          <line class="grid-line" x1="120" y1="40" x2="120" y2="620"/>
+          <line class="grid-line" x1="160" y1="40" x2="160" y2="620"/>
+          <line class="grid-line" x1="200" y1="40" x2="200" y2="620"/>
+          <line class="grid-line" x1="280" y1="40" x2="280" y2="620"/>
+          <line class="grid-line" x1="400" y1="40" x2="400" y2="620"/>
+          <line class="grid-line" x1="600" y1="40" x2="600" y2="620"/>
+          <line class="grid-line" x1="920" y1="40" x2="920" y2="620"/>
+          <line class="grid-line" x1="80" y1="594" x2="960" y2="594"/>
+          <line class="grid-line" x1="80" y1="567" x2="960" y2="567"/>
+          <line class="grid-line" x1="80" y1="541" x2="960" y2="541"/>
+          <line class="grid-line" x1="80" y1="488" x2="960" y2="488"/>
+          <line class="grid-line" x1="80" y1="409" x2="960" y2="409"/>
+          <line class="grid-line" x1="80" y1="277" x2="960" y2="277"/>
+          <line class="grid-line" x1="80" y1="67"  x2="960" y2="67"/>
+        </g>
+
+        <line class="divider" x1="520" y1="40" x2="520" y2="620"/>
+        <line class="divider" x1="80" y1="330" x2="960" y2="330"/>
+        <text class="quad" x="96"  y="60">QUICK WINS</text>
+        <text class="quad" x="536" y="60">GROSSE VORHABEN</text>
+        <text class="quad" x="96"  y="610">NEBENBEI</text>
+        <text class="quad" x="536" y="610">VERMEIDEN</text>
+
+        <line class="axis" x1="80" y1="620" x2="960" y2="620"/>
+        <line class="axis" x1="80" y1="40"  x2="80"  y2="620"/>
+        <g class="ticks">
+          <line class="tick" x1="120" y1="620" x2="120" y2="626"/><text class="tick-lbl" x="120" y="640" text-anchor="middle">1</text>
+          <line class="tick" x1="160" y1="620" x2="160" y2="626"/><text class="tick-lbl" x="160" y="640" text-anchor="middle">2</text>
+          <line class="tick" x1="200" y1="620" x2="200" y2="626"/><text class="tick-lbl" x="200" y="640" text-anchor="middle">3</text>
+          <line class="tick" x1="280" y1="620" x2="280" y2="626"/><text class="tick-lbl" x="280" y="640" text-anchor="middle">5</text>
+          <line class="tick" x1="400" y1="620" x2="400" y2="626"/><text class="tick-lbl" x="400" y="640" text-anchor="middle">8</text>
+          <line class="tick" x1="600" y1="620" x2="600" y2="626"/><text class="tick-lbl" x="600" y="640" text-anchor="middle">13</text>
+          <line class="tick" x1="920" y1="620" x2="920" y2="626"/><text class="tick-lbl" x="920" y="640" text-anchor="middle">21</text>
+          <line class="tick" x1="74" y1="594" x2="80" y2="594"/><text class="tick-lbl" x="66" y="598" text-anchor="end">1</text>
+          <line class="tick" x1="74" y1="567" x2="80" y2="567"/><text class="tick-lbl" x="66" y="571" text-anchor="end">2</text>
+          <line class="tick" x1="74" y1="541" x2="80" y2="541"/><text class="tick-lbl" x="66" y="545" text-anchor="end">3</text>
+          <line class="tick" x1="74" y1="488" x2="80" y2="488"/><text class="tick-lbl" x="66" y="492" text-anchor="end">5</text>
+          <line class="tick" x1="74" y1="409" x2="80" y2="409"/><text class="tick-lbl" x="66" y="413" text-anchor="end">8</text>
+          <line class="tick" x1="74" y1="277" x2="80" y2="277"/><text class="tick-lbl" x="66" y="281" text-anchor="end">13</text>
+          <line class="tick" x1="74" y1="67"  x2="80" y2="67"/><text class="tick-lbl" x="66" y="71"  text-anchor="end">21</text>
+        </g>
+        <text class="axis-lbl" x="960" y="662" text-anchor="end">EFFORT →</text>
+        <text class="axis-lbl" transform="translate(30,620) rotate(-90)" text-anchor="start">IMPACT →</text>
+
+        <!-- Ablesekreuz auf der Selektion -->
+        <g class="crosshair">
+          <line class="cross" x1="80" y1="277" x2="400" y2="277"/>
+          <line class="cross" x1="400" y1="277" x2="400" y2="620"/>
+          <rect class="readbox" x="386" y="626" width="28" height="17"/>
+          <text class="readtxt" x="400" y="638" text-anchor="middle">08</text>
+          <rect class="readbox" x="44" y="269" width="28" height="17"/>
+          <text class="readtxt" x="58" y="281" text-anchor="middle">13</text>
+        </g>
+
+        <g class="edges">
+          <line class="edge e-req" style="--len:291" x1="412" y1="289" x2="586" y2="473" marker-end="url(#arrowM)"/>
+          <line class="edge e-req" style="--len:408" x1="583" y1="485" x2="221" y2="413" marker-end="url(#arrowM)"/>
+          <line class="edge e-rel" x1="392" y1="292" x2="290" y2="470" marker-end="url(#arrowC)"/>
+          <line class="edge e-exc" style="--len:356" x1="389" y1="290" x2="184" y2="529"/>
+          <line class="strike" x1="176" y1="540" x2="192" y2="518"/>
+          <text class="edge-lbl" x="512" y="378">nutzt Identität</text>
+          <text class="edge-lbl" x="322" y="436">gemeinsame Events</text>
+          <text class="edge-lbl" x="300" y="334" text-anchor="end">widerspricht sich</text>
+          <text class="edge-lbl" x="474" y="452" text-anchor="middle">nutzt Session</text>
+          <g class="dim">
+            <line class="edge e-req" style="--len:537" x1="904" y1="405" x2="420" y2="282" marker-end="url(#arrowM)"/>
+            <line class="edge e-rel" x1="586" y1="286" x2="418" y2="397" marker-end="url(#arrowC)"/>
+            <line class="edge e-rel" x1="271" y1="527" x2="211" y2="427" marker-end="url(#arrowC)"/>
+            <line class="edge e-exc" style="--len:487" x1="583" y1="491" x2="144" y2="563"/>
+            <line class="strike" x1="136" y1="554" x2="152" y2="572"/>
+            <line class="edge e-rel" x1="276" y1="293" x2="206" y2="547" marker-end="url(#arrowC)"/>
+          </g>
+        </g>
+
+        <g class="nodes">
+          <g class="node sel">
+            <circle cx="400" cy="277" r="15"/>
+            <text x="422" y="275">Rollen &amp; Rechte</text>
+            <text class="sub" x="422" y="290">13 · 8</text>
+          </g>
+          <g class="node">
+            <circle class="ring" cx="600" cy="488" r="21"/>
+            <circle cx="600" cy="488" r="15"/>
+            <text x="628" y="486">Single Sign-On</text>
+            <text class="sub" x="628" y="501">5 · 13</text>
+          </g>
+          <g class="node">
+            <circle class="ring" cx="200" cy="409" r="21"/>
+            <circle cx="200" cy="409" r="15"/>
+            <text x="228" y="407">Benutzer-Login</text>
+            <text class="sub" x="228" y="422">8 · 3</text>
+          </g>
+          <g class="node">
+            <circle cx="280" cy="488" r="15"/>
+            <text x="302" y="486">Audit-Log</text>
+            <text class="sub" x="302" y="501">5 · 5</text>
+          </g>
+          <g class="node">
+            <circle cx="168" cy="547" r="15"/>
+            <line class="strike" x1="157" y1="558" x2="179" y2="536"/>
+            <text x="190" y="552">Gastzugang</text>
+          </g>
+
+          <g class="dim">
+            <line class="anchor" x1="154" y1="541" x2="166" y2="541"/>
+            <line class="anchor" x1="160" y1="535" x2="160" y2="547"/>
+            <g class="node"><circle cx="152" cy="535" r="15"/><text x="134" y="514" text-anchor="end">PDF-Export</text></g>
+            <g class="node"><circle cx="120" cy="567" r="15"/><text x="142" y="572">Basic Auth</text></g>
+            <g class="node"><circle cx="400" cy="409" r="15"/><text x="422" y="414">Volltextsuche</text></g>
+            <g class="node"><circle cx="600" cy="277" r="15"/><text x="622" y="282">Kennzahlen-Dashboard</text></g>
+            <g class="node"><circle cx="200" cy="567" r="15"/><text x="222" y="572">Dark Mode</text></g>
+            <g class="node"><circle cx="920" cy="409" r="15"/><text x="898" y="414" text-anchor="end">Öffentliche API</text></g>
+            <g class="node"><circle cx="280" cy="277" r="15"/><text x="302" y="282">Mobile Ansicht</text></g>
+            <g class="node"><circle cx="160" cy="488" r="15"/><text x="182" y="493">CSV-Import</text></g>
+            <g class="node"><circle cx="280" cy="541" r="15"/><text x="302" y="546">Benachrichtigungen</text></g>
+          </g>
+        </g>
+      </svg>
+
+      <div class="key">
+        <span><svg viewBox="0 0 38 10"><line x1="0" y1="5" x2="30" y2="5" stroke="#C10E6B" stroke-width="1.5"/><path d="M30 2 L37 5 L30 8 Z" fill="#C10E6B"/></svg> <i>benötigt</i></span>
+        <span><svg viewBox="0 0 38 10"><line x1="0" y1="5" x2="30" y2="5" stroke="#00768F" stroke-width="1.5" stroke-dasharray="5 4"/><path d="M30 2 L37 5 L30 8 Z" fill="#00768F"/></svg> <i>hängt zusammen</i></span>
+        <span><svg viewBox="0 0 38 10"><line x1="0" y1="5" x2="32" y2="5" stroke="#CC5115" stroke-width="1.5"/><line x1="30" y1="2" x2="37" y2="8" stroke="#CC5115" stroke-width="1.5"/><line x1="37" y1="2" x2="30" y2="8" stroke="#CC5115" stroke-width="1.5"/></svg> <i>schließt aus</i></span>
+        <span><svg viewBox="0 0 38 10"><circle cx="9" cy="5" r="3" fill="none" stroke="#16211C" stroke-width="1.2"/><circle cx="9" cy="5" r="6.5" fill="none" stroke="#C10E6B" stroke-width="1" stroke-dasharray="2 3"/></svg> <i>Vorbedingung</i></span>
+      </div>
+
+      <div class="readout">
+        <header>
+          <h3>Rollen &amp; Rechte</h3>
+          <div class="id mono">rollen</div>
+        </header>
+        <div class="vals">
+          <div class="val"><u>Impact</u><strong class="mono">13</strong></div>
+          <div class="val"><u>Effort</u><strong class="mono">8</strong></div>
+        </div>
+        <div class="rel">
+          <h4>Ausgehend</h4>
+          <ul>
+            <li><span class="glyph g-req mono">--&gt;</span><span>Single Sign-On <small>· nutzt Identität</small></span></li>
+            <li><span class="glyph g-rel mono">-.-&gt;</span><span>Audit-Log <small>· gemeinsame Events</small></span></li>
+            <li><span class="glyph g-exc mono">--x</span><span>Gastzugang <small>· widerspricht sich</small></span></li>
+          </ul>
+        </div>
+        <div class="rel">
+          <h4>Eingehend</h4>
+          <ul>
+            <li><span class="glyph g-req mono">--&gt;</span><span>Öffentliche API</span></li>
+          </ul>
+        </div>
+        <div class="acts">
+          <button>Bearbeiten</button>
+          <button>Als Start verwenden</button>
+          <button class="del">Löschen</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="status">
+    <span><span class="dot"></span>Gespeichert 12:04</span>
+    <span class="mono">14 Features · 9 Beziehungen</span>
+    <span class="warn">Keine Zyklen</span>
+    <span class="coord mono">E 08 · I 13</span>
+  </footer>
+</div>
+</body>
+</html>
