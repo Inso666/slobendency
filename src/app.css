@@ -1,0 +1,7 @@
+/*
+	Platzhalter für F-01 (Projektgerüst und Kartentafel).
+
+	Die Token-Blöcke (:root und :root[data-theme="dark"]) aus design/03-seekarte.html sowie
+	die Grundklassen .ribbon, .foot, .cartouche, .btn, .btn.pri, .sw fehlen hier absichtlich
+	noch. Das übernimmt der Feature-Agent unverändert aus dem Entwurf.
+*/
