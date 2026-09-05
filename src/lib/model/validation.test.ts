@@ -116,6 +116,34 @@ describe('addFeature', () => {
 		expect(result.ok).toBe(false);
 	});
 
+	// PRD 4.2 (Grammatik, `identifier = (letter | "_"), {...}`) ist maßgeblich gegenüber dem
+	// weiteren Zeichensatz aus PRD 3.1 — Entscheidung des Orchestrators, features/STATUS.md,
+	// Abschnitt „Entscheidungen des Orchestrators" (05.09.): eine Kennung, die mit Ziffer oder
+	// Bindestrich beginnt, ist ungültig.
+	it('lehnt eine Kennung ab, die mit einer Ziffer beginnt (PRD 4.2)', () => {
+		const map = mapWith([]);
+
+		const result = addFeature(map, feature({ id: '1login' }));
+
+		expect(result.ok).toBe(false);
+	});
+
+	it('lehnt eine Kennung ab, die mit einem Bindestrich beginnt (PRD 4.2)', () => {
+		const map = mapWith([]);
+
+		const result = addFeature(map, feature({ id: '-login' }));
+
+		expect(result.ok).toBe(false);
+	});
+
+	it('akzeptiert eine Kennung, die mit einem Unterstrich beginnt (PRD 4.2)', () => {
+		const map = mapWith([]);
+
+		const result = addFeature(map, feature({ id: '_login' }));
+
+		expect(result.ok).toBe(true);
+	});
+
 	it('lehnt eine leere Kennung ab', () => {
 		const map = mapWith([]);
 
