@@ -49,7 +49,7 @@
 	</header>
 
 	<main class="chart">
-		<MapCanvas {domainMax} />
+		<MapCanvas map={$map} {domainMax} />
 	</main>
 
 	<footer class="foot"></footer>

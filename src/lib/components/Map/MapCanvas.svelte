@@ -1,18 +1,22 @@
 <!--
 	F-08 · Kartengerüst (features/F-08-kartengeruest.md, Abschnitt „Umfang").
+	F-09 · Feature-Signaturen und Jitter (features/F-09-feature-signaturen.md).
 
 	SVG-Wurzel der Karte: viewBox, role="img" mit Beschreibung, Marker- und Musterdefinitionen,
-	gibt die Skala an Regions.svelte, Grid.svelte und Axes.svelte weiter. Marker (Pfeilspitzen)
-	werden bereits hier definiert, weil sie zur SVG-Struktur gehören, die der spätere
-	Bildexport (NFR-43) wiederverwendet; gezeichnet werden sie erst mit den Kanten aus F-10.
+	gibt die Skala an Regions.svelte, Grid.svelte, Axes.svelte und die Feature-Signaturen
+	(FeatureNodes.svelte) weiter. Marker (Pfeilspitzen) werden bereits hier definiert, weil sie
+	zur SVG-Struktur gehören, die der spätere Bildexport (NFR-43) wiederverwendet; gezeichnet
+	werden sie erst mit den Kanten aus F-10.
 -->
 <script lang="ts">
 	import { VIEWBOX } from '../../layout/scales';
+	import type { FeatureMap } from '../../model/types';
 	import Regions from './Regions.svelte';
 	import Grid from './Grid.svelte';
 	import Axes from './Axes.svelte';
+	import FeatureNodes from './FeatureNodes.svelte';
 
-	let { domainMax }: { domainMax: number } = $props();
+	let { map, domainMax }: { map: FeatureMap; domainMax: number } = $props();
 </script>
 
 <svg
@@ -59,6 +63,7 @@
 	<Regions {domainMax} />
 	<Grid {domainMax} />
 	<Axes {domainMax} />
+	<FeatureNodes {map} {domainMax} />
 </svg>
 
 <style>
