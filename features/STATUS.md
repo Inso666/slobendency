@@ -12,8 +12,8 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-04 | Persistenz im LocalStorage | fertig | — | gemergt 05.09. 05:30 |
 | F-05 | DSL-Parser | fertig | — | gemergt 05.09. 07:05 |
 | F-06 | DSL-Serializer | fertig | — | gemergt 05.09. 08:20 |
-| F-07 | Vorbedingungen und Zyklen | in QA | feature/F-07-graph-services | 274 Tests grün (4b2113c) |
-| F-08 | Kartengerüst | offen | — | — |
+| F-07 | Vorbedingungen und Zyklen | fertig | — | gemergt 05.09. 09:10 |
+| F-08 | Kartengerüst | in Tests | feature/F-08-kartengeruest | Test-Agent beauftragt |
 | F-09 | Feature-Signaturen und Jitter | offen | — | — |
 | F-10 | Kanten und Signaturenkatalog | offen | — | — |
 | F-11 | Selektion, Hervorhebung, Dimming | offen | — | — |
