@@ -16,12 +16,12 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-08 | Kartengerüst | fertig | — | gemergt 05.09. 11:00 |
 | F-09 | Feature-Signaturen und Jitter | fertig | — | gemergt 05.09. 13:10 |
 | F-10 | Kanten und Signaturenkatalog | fertig | — | gemergt 05.09. 15:35 |
-| F-11 | Selektion, Hervorhebung, Dimming | in Tests | feature/F-11-selektion | Test-Agent beauftragt |
+| F-11 | Selektion, Hervorhebung, Dimming | in Arbeit | feature/F-11-selektion | 32 Tests rot |
 | F-12 | Zoom und Pan | offen | — | — |
 | F-13 | Feature-Formular | offen | — | — |
 | F-14 | Verzeichnis | offen | — | — |
 | F-15 | Detail-Kartusche | offen | — | — |
-| F-16 | Kontextmenü und Verbindungsvorgang | offen | — | — |
+| F-16 | Kontextmenü und Verbindungsvorgang | offen | — | Nachzuholen: Test für Escape bricht Verbindungsvorgang ab (FR-13); in F-11 mangels Oberfläche nicht fahrbar |
 | F-17 | Beziehungen bearbeiten und löschen | offen | — | — |
 | F-18 | Import-Dialog | offen | — | — |
 | F-19 | Export-Dialog | offen | — | — |
