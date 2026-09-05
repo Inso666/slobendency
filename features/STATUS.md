@@ -10,7 +10,7 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-02 | Domänenmodell und Invarianten | fertig | — | gemergt 05.09. 00:35 |
 | F-03 | Kartenstore und Kommandos | fertig | — | gemergt 05.09. 01:15 |
 | F-04 | Persistenz im LocalStorage | fertig | — | gemergt 05.09. 05:30 |
-| F-05 | DSL-Parser | in Arbeit | feature/F-05-dsl-parser | 45 Tests rot (a25042e), darunter 2 freigegebene aus F-02 |
+| F-05 | DSL-Parser | in QA | feature/F-05-dsl-parser | 176 Tests grün (1cdb89e) |
 | F-06 | DSL-Serializer | offen | — | — |
 | F-07 | Vorbedingungen und Zyklen | offen | — | — |
 | F-08 | Kartengerüst | offen | — | — |
