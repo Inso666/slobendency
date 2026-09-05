@@ -15,7 +15,7 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-07 | Vorbedingungen und Zyklen | fertig | — | gemergt 05.09. 09:10 |
 | F-08 | Kartengerüst | fertig | — | gemergt 05.09. 11:00 |
 | F-09 | Feature-Signaturen und Jitter | fertig | — | gemergt 05.09. 13:10 |
-| F-10 | Kanten und Signaturenkatalog | in Tests | feature/F-10-kanten | Test-Agent beauftragt |
+| F-10 | Kanten und Signaturenkatalog | in Arbeit | feature/F-10-kanten | 30 Tests rot (676c21e) |
 | F-11 | Selektion, Hervorhebung, Dimming | offen | — | — |
 | F-12 | Zoom und Pan | offen | — | — |
 | F-13 | Feature-Formular | offen | — | — |
