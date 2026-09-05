@@ -13,8 +13,8 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-05 | DSL-Parser | fertig | — | gemergt 05.09. 07:05 |
 | F-06 | DSL-Serializer | fertig | — | gemergt 05.09. 08:20 |
 | F-07 | Vorbedingungen und Zyklen | fertig | — | gemergt 05.09. 09:10 |
-| F-08 | Kartengerüst | in QA | feature/F-08-kartengeruest | 301 Unit, 18 E2E grün (f5e4903) |
-| F-09 | Feature-Signaturen und Jitter | offen | — | — |
+| F-08 | Kartengerüst | fertig | — | gemergt 05.09. 11:00 |
+| F-09 | Feature-Signaturen und Jitter | in Tests | feature/F-09-feature-signaturen | Test-Agent beauftragt |
 | F-10 | Kanten und Signaturenkatalog | offen | — | — |
 | F-11 | Selektion, Hervorhebung, Dimming | offen | — | — |
 | F-12 | Zoom und Pan | offen | — | — |
