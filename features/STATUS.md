@@ -16,8 +16,8 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-08 | Kartengerüst | fertig | — | gemergt 05.09. 11:00 |
 | F-09 | Feature-Signaturen und Jitter | fertig | — | gemergt 05.09. 13:10 |
 | F-10 | Kanten und Signaturenkatalog | fertig | — | gemergt 05.09. 15:35 |
-| F-11 | Selektion, Hervorhebung, Dimming | in QA | feature/F-11-selektion | 362 Unit, 60 E2E grün |
-| F-12 | Zoom und Pan | offen | — | — |
+| F-11 | Selektion, Hervorhebung, Dimming | fertig | — | gemergt 05.09. 18:20 |
+| F-12 | Zoom und Pan | in Tests | feature/F-12-zoom-pan | Test-Agent beauftragt |
 | F-13 | Feature-Formular | offen | — | — |
 | F-14 | Verzeichnis | offen | — | — |
 | F-15 | Detail-Kartusche | offen | — | — |
@@ -25,7 +25,7 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-17 | Beziehungen bearbeiten und löschen | offen | — | — |
 | F-18 | Import-Dialog | offen | — | — |
 | F-19 | Export-Dialog | offen | — | — |
-| F-20 | SVG-Export | offen | — | — |
+| F-20 | SVG-Export | offen | — | Nachzuholen: prüfen, dass die unsichtbaren Trefferflächen der Kanten aus F-11 nicht im Export landen |
 | F-21 | PNG-Export | offen | — | — |
 | F-22 | Responsives Verhalten und Touch | offen | — | — |
 | F-23 | Fußleiste, Hinweise, Zurücksetzen | offen | — | — |
