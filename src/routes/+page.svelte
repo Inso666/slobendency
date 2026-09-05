@@ -2,14 +2,17 @@
 	Startseite: dreiteiliges Grundgerüst (Kopfband, Kartenfläche, Fußleiste) nach
 	features/F-01-projektgeruest.md und design/03-seekarte.html.
 
-	Kartendarstellung, Verzeichnis, Kartuschen und Aktionen (+ Feature, Importieren, …) sind
-	nicht Teil dieses Features und folgen in späteren Features (F-08 ff.). Hier wird nur das
-	Raster hergestellt und die Tafelumschaltung bedient.
+	Die Karte selbst (Skalen, Raster, Reviere) kommt aus F-08. Verzeichnis, Kartuschen und
+	weitere Aktionen (+ Feature, Importieren, …) sind nicht Teil dieses Features und folgen in
+	späteren Features.
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { initTheme, theme, type Theme } from '$lib/store/theme';
 	import { initPersistence } from '$lib/store/persistence';
+	import { map } from '$lib/store/mapStore';
+	import { domainMaxOf } from '$lib/layout/scales';
+	import MapCanvas from '$lib/components/Map/MapCanvas.svelte';
 
 	// Synchron beim Aufbau der Komponente, nicht in onMount: FR-72 verlangt, dass der
 	// gespeicherte Bestand vor dem ersten Rendern der Karte wiederhergestellt ist.
@@ -22,6 +25,8 @@
 	function chooseTheme(value: Theme): void {
 		theme.set(value);
 	}
+
+	let domainMax = $derived(domainMaxOf($map));
 </script>
 
 <div class="app">
@@ -43,7 +48,9 @@
 		</div>
 	</header>
 
-	<main class="chart"></main>
+	<main class="chart">
+		<MapCanvas {domainMax} />
+	</main>
 
 	<footer class="foot"></footer>
 </div>

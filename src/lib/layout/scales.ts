@@ -8,6 +8,7 @@
 // VIEWBOX und PLOT stehen bereits als konkrete Werte in features/F-08-kartengeruest.md und
 // sind hier wortgleich übernommen, keine zu implementierende Logik.
 
+import { FIBONACCI } from '../model/types';
 import type { FeatureMap, Quadrant } from '../model/types';
 
 /** Größe des SVG-Koordinatensystems (F-08, Abschnitt „Umfang"). */
@@ -22,17 +23,21 @@ export const PLOT = { left: 80, right: 960, top: 40, bottom: 620 } as const;
  * effort-Wert.
  */
 export function domainMaxOf(map: FeatureMap): number {
-	throw new Error('not implemented');
+	let largest = 21;
+	for (const feature of map.features) {
+		largest = Math.max(largest, feature.impact, feature.effort);
+	}
+	return largest + 1;
 }
 
 /** Rechnet einen Aufwandswert in eine x-Koordinate der Plotfläche um (FR-20). */
 export function xOf(effort: number, domainMax: number): number {
-	throw new Error('not implemented');
+	return PLOT.left + (effort / domainMax) * (PLOT.right - PLOT.left);
 }
 
 /** Rechnet einen Nutzenwert in eine y-Koordinate der Plotfläche um (FR-20, FR-21: oben = hoch). */
 export function yOf(impact: number, domainMax: number): number {
-	throw new Error('not implemented');
+	return PLOT.bottom - (impact / domainMax) * (PLOT.bottom - PLOT.top);
 }
 
 /**
@@ -41,7 +46,11 @@ export function yOf(impact: number, domainMax: number): number {
  * enthält), damit die Achse ihre Obergrenze zeigt.
  */
 export function ticksOf(domainMax: number): number[] {
-	throw new Error('not implemented');
+	const ticks = FIBONACCI.filter((value) => value <= domainMax) as number[];
+	if (domainMax > 22) {
+		ticks.push(domainMax - 1);
+	}
+	return ticks;
 }
 
 /**
@@ -51,5 +60,37 @@ export function ticksOf(domainMax: number): number[] {
 export function regionRects(
 	domainMax: number
 ): Array<{ quadrant: Quadrant; x: number; y: number; width: number; height: number }> {
-	throw new Error('not implemented');
+	const boundaryX = xOf(domainMax / 2, domainMax);
+	const boundaryY = yOf(domainMax / 2, domainMax);
+
+	return [
+		{
+			quadrant: 'quickWins',
+			x: PLOT.left,
+			y: PLOT.top,
+			width: boundaryX - PLOT.left,
+			height: boundaryY - PLOT.top
+		},
+		{
+			quadrant: 'grosseVorhaben',
+			x: boundaryX,
+			y: PLOT.top,
+			width: PLOT.right - boundaryX,
+			height: boundaryY - PLOT.top
+		},
+		{
+			quadrant: 'nebenbei',
+			x: PLOT.left,
+			y: boundaryY,
+			width: boundaryX - PLOT.left,
+			height: PLOT.bottom - boundaryY
+		},
+		{
+			quadrant: 'vermeiden',
+			x: boundaryX,
+			y: boundaryY,
+			width: PLOT.right - boundaryX,
+			height: PLOT.bottom - boundaryY
+		}
+	];
 }
