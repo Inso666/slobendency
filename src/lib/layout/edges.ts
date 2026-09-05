@@ -58,15 +58,6 @@ function placementOf(id: string, byId: Map<string, Placement>): Placement {
 }
 
 /**
- * Trägt das Ziel bereits den Vorbedingungsring, weil irgendeine `requires`-Beziehung darauf
- * zeigt? Der Ring gehört zum Feature, nicht zur einzelnen Kante — jede Kante, die auf ein
- * solches Ziel zeigt, muss ihn beim Trimmen berücksichtigen.
- */
-function targetHasRing(id: string, relations: Relation[]): boolean {
-	return relations.some((relation) => relation.to === id && relation.type === 'requires');
-}
-
-/**
  * Berechnet für jede Beziehung die Kantengeometrie anhand der Platzierungen aus F-09
  * (F-10, Abschnitt „Umfang").
  */
@@ -85,10 +76,16 @@ export function layoutEdges(relations: Relation[], placements: Placement[]): Edg
 		const ux = length > 0 ? dx / length : 0;
 		const uy = length > 0 ? dy / length : 0;
 
+		// Der Trimmwert richtet sich nach der Art dieser einzelnen Beziehung (F-10
+		// „Signaturenkatalog"): Nur eine `requires`-Kante trägt an ihrem eigenen Ziel den
+		// Vorbedingungsring, nur eine `excludes`-Kante braucht Platz für die x-Endmarke. Dass
+		// derselbe Zielpunkt zusätzlich über eine andere Beziehung eine Rolle trägt (Ring oder
+		// Durchstreichung), ändert die Trimmung dieser Kante nicht — die Signatur der jeweils
+		// anderen Kante regelt sich selbst.
 		const targetTrim =
 			relation.type === 'excludes'
 				? TRIM_TARGET_EXCLUDE
-				: targetHasRing(relation.to, relations)
+				: relation.type === 'requires'
 					? TRIM_TARGET_RING
 					: TRIM_TARGET;
 
