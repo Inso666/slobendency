@@ -25,5 +25,11 @@ export interface RelationRowInput {
  * der Zeilen.
  */
 export function relationsFromRows(sourceId: FeatureId, rows: RelationRowInput[]): Relation[] {
-	throw new Error('not implemented');
+	return rows.map((row) => {
+		const relation: Relation = { from: sourceId, to: row.targetId, type: row.type };
+		if (row.label !== '') {
+			relation.label = row.label;
+		}
+		return relation;
+	});
 }

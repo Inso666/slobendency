@@ -2,25 +2,35 @@
 	Startseite: dreiteiliges Grundgerüst (Kopfband, Kartenfläche, Fußleiste) nach
 	features/F-01-projektgeruest.md und design/03-seekarte.html.
 
-	Die Karte selbst (Skalen, Raster, Reviere) kommt aus F-08. Verzeichnis, Kartuschen und
-	weitere Aktionen (+ Feature, Importieren, …) sind nicht Teil dieses Features und folgen in
-	späteren Features.
+	Die Karte selbst (Skalen, Raster, Reviere) kommt aus F-08. Verzeichnis und weitere Aktionen
+	(Importieren, Exportieren, …) sind nicht Teil dieses Features und folgen in späteren
+	Features.
 
 	F-12 · Zoom und Pan (features/F-12-zoom-pan.md, Abschnitt „Verhalten", Zeile
 	„Zurücksetzen"): Knopf „Ansicht" öffnet ein Menü mit „Ganze Karte zeigen", das den
 	Ausschnitt zurücksetzt (design/03-seekarte.html zeigt „Ansicht" bereits als eigenen Knopf im
-	Kopfband, neben den — hier noch nicht umgesetzten — Knöpfen „+ Feature", „Importieren" und
-	„Exportieren" späterer Features).
+	Kopfband, neben den — hier noch nicht umgesetzten — Knöpfen „Importieren" und „Exportieren"
+	späterer Features).
+
+	F-13 · Feature-Formular (features/F-13-feature-formular.md): Knopf „+ Feature" öffnet das
+	Anlegeformular. Ein über Rolle und Text erreichbarer Knopf „Bearbeiten" — Entscheidung des
+	Orchestrators, siehe features/STATUS.md, Abschnitt „Entscheidungen des Orchestrators", da
+	F-13 nicht von F-15/F-16 abhängt, aus denen die Quellen sonst einen Auslöser für den
+	Bearbeitungsmodus (FR-04) kennen würden — öffnet dasselbe Formular vorbefüllt, solange ein
+	Feature selektiert ist (F-11 `selectedId`). Beide Knöpfe merken sich das auslösende Element,
+	damit der Fokus beim Schließen dorthin zurückkehrt (F-13, Abschnitt „Darstellung"); das ist
+	Aufgabe des Aufrufers, nicht von FeatureModal.svelte selbst.
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { initTheme, theme, type Theme } from '$lib/store/theme';
 	import { initPersistence } from '$lib/store/persistence';
-	import { map } from '$lib/store/mapStore';
-	import { highlightMode } from '$lib/store/selection';
+	import { map, selectedFeature } from '$lib/store/mapStore';
+	import { highlightMode, selectedId } from '$lib/store/selection';
 	import { domainMaxOf } from '$lib/layout/scales';
 	import { resetViewport } from '$lib/store/viewport';
 	import MapCanvas from '$lib/components/Map/MapCanvas.svelte';
+	import FeatureModal from '$lib/components/FeatureModal/FeatureModal.svelte';
 
 	// Synchron beim Aufbau der Komponente, nicht in onMount: FR-72 verlangt, dass der
 	// gespeicherte Bestand vor dem ersten Rendern der Karte wiederhergestellt ist.
@@ -51,6 +61,31 @@
 	function handleViewMenuKeydown(event: KeyboardEvent): void {
 		if (event.key === 'Escape') viewMenuOpen = false;
 	}
+
+	// F-13 · Feature-Formular: Modalzustand des Kopfbands. `modalTrigger` merkt das auslösende
+	// Element, damit der Fokus beim Schließen dorthin zurückkehrt (F-13, Abschnitt
+	// „Darstellung").
+	let modalOpen = $state(false);
+	let modalMode = $state<'create' | 'edit'>('create');
+	let modalTrigger: HTMLElement | null = null;
+
+	function openCreateModal(event: MouseEvent): void {
+		modalTrigger = event.currentTarget as HTMLElement;
+		modalMode = 'create';
+		modalOpen = true;
+	}
+
+	function openEditModal(event: MouseEvent): void {
+		modalTrigger = event.currentTarget as HTMLElement;
+		modalMode = 'edit';
+		modalOpen = true;
+	}
+
+	function closeModal(): void {
+		modalOpen = false;
+		modalTrigger?.focus();
+		modalTrigger = null;
+	}
 </script>
 
 <svelte:window onkeydown={handleViewMenuKeydown} />
@@ -62,6 +97,10 @@
 			<span>Blatt 1 · Impact / Effort</span>
 		</div>
 		<div class="acts">
+			<button type="button" class="btn pri" onclick={openCreateModal}>+ Feature</button>
+			{#if $selectedId}
+				<button type="button" class="btn" onclick={openEditModal}>Bearbeiten</button>
+			{/if}
 			<div class="view-menu">
 				<button
 					type="button"
@@ -122,4 +161,13 @@
 	</main>
 
 	<footer class="foot"></footer>
+
+	{#if modalOpen}
+		<FeatureModal
+			open={modalOpen}
+			mode={modalMode}
+			feature={modalMode === 'edit' ? $selectedFeature : null}
+			onClose={closeModal}
+		/>
+	{/if}
 </div>

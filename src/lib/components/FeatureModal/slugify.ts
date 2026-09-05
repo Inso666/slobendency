@@ -12,7 +12,19 @@
 //
 // Signatur ist vom Test-Agenten vorgegeben. Rumpf ist Aufgabe des Feature-Agenten.
 
+const UMLAUT_MAP: Record<string, string> = {
+	ä: 'ae',
+	ö: 'oe',
+	ü: 'ue',
+	ß: 'ss'
+};
+
 /** Schlägt aus einem Anzeigenamen eine Kennung vor (F-13, Abschnitt "Slugify"). */
 export function slugify(input: string): string {
-	throw new Error('not implemented');
+	const lower = input.toLowerCase();
+	const withoutUmlauts = lower.replace(/[äöüß]/g, (match) => UMLAUT_MAP[match]);
+	const withDashes = withoutUmlauts.replace(/[^a-z0-9-]+/g, '-');
+	const collapsed = withDashes.replace(/-+/g, '-');
+	const trimmed = collapsed.replace(/^-+|-+$/g, '');
+	return trimmed.slice(0, 64);
 }
