@@ -18,9 +18,9 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-10 | Kanten und Signaturenkatalog | fertig | — | gemergt 05.09. 15:35 |
 | F-11 | Selektion, Hervorhebung, Dimming | fertig | — | gemergt 05.09. 18:20 |
 | F-12 | Zoom und Pan | fertig | — | gemergt 05.09. 20:05 |
-| F-13 | Feature-Formular | in Tests | feature/F-13-feature-formular | Test-Agent beauftragt |
+| F-13 | Feature-Formular | in Arbeit | feature/F-13-feature-formular | 40 Tests rot |
 | F-14 | Verzeichnis | offen | — | — |
-| F-15 | Detail-Kartusche | offen | — | — |
+| F-15 | Detail-Kartusche | offen | — | Auflage: den Knopf Bearbeiten aus F-13 in die Kartusche übernehmen, nicht danebenstellen |
 | F-16 | Kontextmenü und Verbindungsvorgang | offen | — | Nachzuholen: Test für Escape bricht Verbindungsvorgang ab (FR-13); in F-11 mangels Oberfläche nicht fahrbar |
 | F-17 | Beziehungen bearbeiten und löschen | offen | — | — |
 | F-18 | Import-Dialog | offen | — | — |
@@ -73,6 +73,15 @@ gewinnt. Beide Lesarten wären deterministisch, aber nur eine ist die maßgeblic
 vorgelegten Tests prüfen keine winkelabhängige Koordinate, sondern Ankerpunkt, Radius,
 Determinismus und Gruppenisolation; die Entscheidung ist damit umkehrbar, ohne Tests zu
 berühren.
+
+**Auslöser für den Bearbeitungsmodus (05.09.).** `features/F-13-feature-formular.md` führt FR-04
+unter seinen Fachregeln und verlangt in seinem Testabschnitt einen Durchlauf „Bearbeiten mit
+Umbenennen". Einen Auslöser dafür nennen die Quellen aber nur in F-15 (Detail-Kartusche) und
+F-16 (Kontextmenü), von denen F-13 nicht abhängt. Festgelegt: F-13 bringt einen über Rolle und
+Text erreichbaren Knopf *Bearbeiten*, sichtbar solange ein Feature gewählt ist. Das Formular
+samt Bearbeitungsmodus gehört unstrittig zu F-13, und ohne Auslöser wäre das
+Akzeptanzkriterium nicht prüfbar. F-15 übernimmt diesen Knopf später in die Kartusche, statt
+einen zweiten danebenzustellen — sonst stünde dieselbe Bedienhandlung zweimal.
 
 ## Sessionprotokoll
 
