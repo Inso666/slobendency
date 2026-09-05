@@ -11,8 +11,8 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-03 | Kartenstore und Kommandos | fertig | — | gemergt 05.09. 01:15 |
 | F-04 | Persistenz im LocalStorage | fertig | — | gemergt 05.09. 05:30 |
 | F-05 | DSL-Parser | fertig | — | gemergt 05.09. 07:05 |
-| F-06 | DSL-Serializer | in QA | feature/F-06-dsl-serializer | 223 grün, 14 offen (Teständerung freigegeben) |
-| F-07 | Vorbedingungen und Zyklen | offen | — | — |
+| F-06 | DSL-Serializer | fertig | — | gemergt 05.09. 08:20 |
+| F-07 | Vorbedingungen und Zyklen | in Tests | feature/F-07-graph-services | Test-Agent beauftragt |
 | F-08 | Kartengerüst | offen | — | — |
 | F-09 | Feature-Signaturen und Jitter | offen | — | — |
 | F-10 | Kanten und Signaturenkatalog | offen | — | — |
