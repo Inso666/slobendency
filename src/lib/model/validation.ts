@@ -20,7 +20,11 @@ export interface RuleViolation {
 /** Ergebnis einer Aggregatsoperation: entweder eine neue Karte oder gesammelte Fehler. */
 export type Result<T> = { ok: true; value: T } | { ok: false; errors: RuleViolation[] };
 
-const ID_PATTERN = /^[A-Za-z0-9_-]+$/;
+// Zeichensatz nach PRD 4.2 (Grammatik, `identifier = (letter | "_"), { letter | digit | "_" | "-" }`),
+// maßgeblich gegenüber dem weiteren Zeichensatz aus PRD 3.1 — Entscheidung des Orchestrators,
+// features/STATUS.md, Abschnitt „Entscheidungen des Orchestrators": eine Kennung muss mit einem
+// Buchstaben oder Unterstrich beginnen; Ziffer und Bindestrich sind nur an Folgepositionen erlaubt.
+const ID_PATTERN = /^[A-Za-z_][A-Za-z0-9_-]*$/;
 const ID_MAX_LENGTH = 64;
 const LABEL_MAX_LENGTH = 200;
 const RELATION_LABEL_MAX_LENGTH = 120;
@@ -50,7 +54,8 @@ function validateId(id: FeatureId): RuleViolation[] {
 	if (!ID_PATTERN.test(id)) {
 		errors.push({
 			rule: 'FIELD',
-			message: 'Kennung darf nur Buchstaben, Ziffern, „_" und „-" enthalten',
+			message:
+				'Kennung muss mit einem Buchstaben oder „_" beginnen und darf danach nur Buchstaben, Ziffern, „_" und „-" enthalten',
 			field: 'id'
 		});
 	}
