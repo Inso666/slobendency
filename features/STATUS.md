@@ -17,8 +17,8 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-09 | Feature-Signaturen und Jitter | fertig | — | gemergt 05.09. 13:10 |
 | F-10 | Kanten und Signaturenkatalog | fertig | — | gemergt 05.09. 15:35 |
 | F-11 | Selektion, Hervorhebung, Dimming | fertig | — | gemergt 05.09. 18:20 |
-| F-12 | Zoom und Pan | in QA | feature/F-12-zoom-pan | 376 Unit, 76 E2E grün (1e412cd) |
-| F-13 | Feature-Formular | offen | — | — |
+| F-12 | Zoom und Pan | fertig | — | gemergt 05.09. 20:05 |
+| F-13 | Feature-Formular | in Tests | feature/F-13-feature-formular | Test-Agent beauftragt |
 | F-14 | Verzeichnis | offen | — | — |
 | F-15 | Detail-Kartusche | offen | — | — |
 | F-16 | Kontextmenü und Verbindungsvorgang | offen | — | Nachzuholen: Test für Escape bricht Verbindungsvorgang ab (FR-13); in F-11 mangels Oberfläche nicht fahrbar |
