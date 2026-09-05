@@ -487,8 +487,13 @@ function randomMap(rng: () => number): FeatureMap {
 	return map(features, relations);
 }
 
+// Ein Anzeigename, der der Kennung entspricht, wird beim Export ohne Klammerteil ausgegeben
+// (DSL-13) und ist danach von „kein Anzeigename gesetzt" nicht mehr unterscheidbar — keine
+// Quelle verlangt diese Unterscheidbarkeit über die Rundreise hinweg. Freigegeben vom
+// Orchestrator (features/STATUS.md, „Entscheidungen des Orchestrators").
 function tupleOf(f: Feature): string {
-	return JSON.stringify([f.id, f.impact, f.effort, f.label ?? null]);
+	const label = f.label === undefined || f.label === f.id ? null : f.label;
+	return JSON.stringify([f.id, f.impact, f.effort, label]);
 }
 
 function relationTupleOf(r: Relation): string {
