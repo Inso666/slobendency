@@ -99,8 +99,22 @@
 	 * beim nächsten Tab wieder ins Formular zurückspringt — das zählt bereits als „außerhalb
 	 * des Modals" und wird hier verhindert, indem Tab/Shift+Tab am Rand der Fokusreihenfolge
 	 * selbst auf das jeweils andere Ende springen.
+	 *
+	 * Zusätzlich wird ein Escape-Tastendruck hier per `stopPropagation()` von der Karte
+	 * ferngehalten: Das native `<dialog>` schließt sich bei Escape unabhängig davon, ob das
+	 * zugehörige `keydown` weiterläuft (das Schließen ist eine Default-Aktion des Browsers,
+	 * keine Reaktion auf einen Bubbling-Listener) — ohne dieses `stopPropagation()` erreicht
+	 * dasselbe `keydown` aber zusätzlich den globalen Escape-Listener der Karte
+	 * (MapCanvas.svelte, F-11-AK „ESC hebt Selektion auf") und hebt die Selektion des gerade
+	 * bearbeiteten Features nebenbei mit auf — ein Bruch, den Escape hier nicht auslösen darf
+	 * (F-13, Abschnitt „Darstellung": Escape ist ausschließlich fürs Schließen des Formulars
+	 * zuständig, siehe QA-Befund F-13).
 	 */
 	function handleTrapKeydown(event: KeyboardEvent): void {
+		if (event.key === 'Escape') {
+			event.stopPropagation();
+			return;
+		}
 		if (event.key !== 'Tab') return;
 
 		const focusable = Array.from(dialogEl.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
