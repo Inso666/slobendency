@@ -29,11 +29,6 @@ test.describe('F-04 · Persistenz im LocalStorage', () => {
 	test('speichert den Bestand automatisch und übersteht ein Neuladen unverändert (AK-02)', async ({
 		page
 	}) => {
-		await page.addInitScript(
-			(key) => window.localStorage.removeItem(key),
-			STORAGE_KEY
-		);
-
 		await page.goto('/');
 		await expect(page.getByRole('main')).toBeVisible();
 
