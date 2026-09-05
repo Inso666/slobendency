@@ -11,7 +11,7 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-03 | Kartenstore und Kommandos | fertig | — | gemergt 05.09. 01:15 |
 | F-04 | Persistenz im LocalStorage | fertig | — | gemergt 05.09. 05:30 |
 | F-05 | DSL-Parser | fertig | — | gemergt 05.09. 07:05 |
-| F-06 | DSL-Serializer | in Tests | feature/F-06-dsl-serializer | Test-Agent beauftragt |
+| F-06 | DSL-Serializer | in Arbeit | feature/F-06-dsl-serializer | 58 Tests rot (3b7cd7c) |
 | F-07 | Vorbedingungen und Zyklen | offen | — | — |
 | F-08 | Kartengerüst | offen | — | — |
 | F-09 | Feature-Signaturen und Jitter | offen | — | — |
@@ -44,6 +44,16 @@ wäre eine Kennung mit führendem Bindestrich in `relation_def` nicht eindeutig 
 für jede gültige Karte erfüllbar. Folge: Die Kennungsprüfung in `src/lib/model/validation.ts`
 aus F-02 wird verengt, die zugehörigen Tests werden angepasst. Beides ist im Rahmen von F-05
 freigegeben.
+
+**Ausrichtung der Attribute im Export, DSL-12 (05.09.).** Der Regeltext in
+`features/F-06-dsl-serializer.md` nennt als Trenner `, ` und lässt den Nutzenwert rechts auf
+die Breite des längsten Nutzenwerts auffüllen. Das Beispiel im selben Dokument zeigt dagegen
+`impact=5,  effort=5`, also Komma und zwei Leerzeichen, obwohl dort alle Nutzenwerte einstellig
+sind und nach keiner Auffüllregel etwas aufzufüllen wäre. Maßgeblich ist der Regeltext; das
+Beispiel ist Anschauung und nicht byteverbindlich. Kein ableitbares Schema erzeugt die zwei
+Leerzeichen, weder vor noch hinter dem Komma, womit der einzige normative Satz übrig bleibt.
+Die Aufwandsspalte fluchtet damit weiterhin, und DSL-08 erlaubt das Leerzeichen vor dem Komma
+ausdrücklich.
 
 ## Sessionprotokoll
 
