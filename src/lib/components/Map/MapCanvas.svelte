@@ -13,11 +13,19 @@
 	deren tatsächlich gerenderten Punkten enden. Die Zeichenerklärung (Legend.svelte) liegt als
 	Kartusche über der Kartenfläche, außerhalb des SVG, weil sie fester Bestandteil des
 	Bildschirms ist, nicht des exportierten Bildes.
+
+	F-11 · Selektion, Hervorhebung, Dimming (features/F-11-selektion.md, Abschnitt
+	„Interaktion"): Empfänger der Klicks auf freie Fläche (FR-46) und der ESC-Taste (FR-46,
+	FR-13). Ein Klick auf ein Feature (FeatureNodes.svelte) stoppt seine eigene Ausbreitung, ein
+	Klick daneben — auf Reviere, Raster, Kanten oder die Kartenfläche selbst — hebt die
+	Selektion deshalb hier auf.
 -->
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { VIEWBOX } from '../../layout/scales';
 	import { placeFeatures } from '../../layout/jitter';
 	import type { FeatureMap } from '../../model/types';
+	import { clearSelection } from '../../store/selection';
 	import Regions from './Regions.svelte';
 	import Grid from './Grid.svelte';
 	import Axes from './Axes.svelte';
@@ -28,6 +36,14 @@
 	let { map, domainMax }: { map: FeatureMap; domainMax: number } = $props();
 
 	let placements = $derived(placeFeatures(map, domainMax));
+
+	onMount(() => {
+		function handleKeydown(event: KeyboardEvent): void {
+			if (event.key === 'Escape') clearSelection();
+		}
+		window.addEventListener('keydown', handleKeydown);
+		return () => window.removeEventListener('keydown', handleKeydown);
+	});
 </script>
 
 <svg
@@ -36,6 +52,7 @@
 	preserveAspectRatio="xMidYMid meet"
 	role="img"
 	aria-label="Streudiagramm: Effort waagerecht, Impact senkrecht"
+	onclick={() => clearSelection()}
 >
 	<defs>
 		<marker
