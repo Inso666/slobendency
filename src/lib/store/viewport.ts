@@ -19,7 +19,8 @@
 // Punkt" und deren Verhalten-Tabelle (Mausrad/Pinch, Ziehen) voraussetzt. Rümpfe sind Aufgabe
 // des Feature-Agenten.
 
-import { writable, type Writable } from 'svelte/store';
+import { get, writable, type Writable } from 'svelte/store';
+import { PLOT, VIEWBOX } from '../layout/scales';
 
 /** Ausschnitt der Karte. scale 1 = Vollansicht (F-12, Abschnitt „Umfang"). */
 export interface Viewport {
@@ -42,11 +43,26 @@ export const MAX_SCALE = 4;
 export const viewport: Writable<Viewport> = writable<Viewport>({ x: 0, y: 0, scale: 1 });
 
 /**
+ * Klemmt den Ausschnitt (x, y) bei gegebenem Maßstab so, dass ein Teil der Plotfläche
+ * innerhalb von VIEWBOX sichtbar bleibt (siehe Kommentar über zoomAt()).
+ */
+function clampOrigin(x: number, y: number, scale: number): { x: number; y: number } {
+	const minX = -scale * PLOT.right;
+	const maxX = VIEWBOX.width - scale * PLOT.left;
+	const minY = -scale * PLOT.bottom;
+	const maxY = VIEWBOX.height - scale * PLOT.top;
+	return {
+		x: Math.min(Math.max(x, minX), maxX),
+		y: Math.min(Math.max(y, minY), maxY)
+	};
+}
+
+/**
  * Setzt den Ausschnitt auf die Vollansicht zurück (Maßstab 1, Ursprung 0/0) — Knopf
  * „Ansicht → Ganze Karte zeigen" (F-12, Abschnitt „Verhalten").
  */
 export function resetViewport(): void {
-	throw new Error('not implemented');
+	viewport.set({ x: 0, y: 0, scale: 1 });
 }
 
 /**
@@ -56,7 +72,11 @@ export function resetViewport(): void {
  * anschließend wie bei zoomAt() und panBy() auf die Plotfläche geklemmt (siehe dort).
  */
 export function centerOn(x: number, y: number): void {
-	throw new Error('not implemented');
+	const current = get(viewport);
+	const targetX = VIEWBOX.width / 2 - current.scale * x;
+	const targetY = VIEWBOX.height / 2 - current.scale * y;
+	const clamped = clampOrigin(targetX, targetY, current.scale);
+	viewport.set({ x: clamped.x, y: clamped.y, scale: current.scale });
 }
 
 /**
@@ -73,7 +93,16 @@ export function centerOn(x: number, y: number): void {
  * [-scale·PLOT.bottom, VIEWBOX.height − scale·PLOT.top].
  */
 export function zoomAt(pointerX: number, pointerY: number, factor: number): void {
-	throw new Error('not implemented');
+	const before = get(viewport);
+	const contentX = (pointerX - before.x) / before.scale;
+	const contentY = (pointerY - before.y) / before.scale;
+
+	const newScale = Math.min(Math.max(before.scale * factor, MIN_SCALE), MAX_SCALE);
+	const newX = pointerX - newScale * contentX;
+	const newY = pointerY - newScale * contentY;
+
+	const clamped = clampOrigin(newX, newY, newScale);
+	viewport.set({ x: clamped.x, y: clamped.y, scale: newScale });
 }
 
 /**
@@ -84,5 +113,7 @@ export function zoomAt(pointerX: number, pointerY: number, factor: number): void
  * Anschließend greift dieselbe Klemmung wie bei zoomAt() (siehe dort).
  */
 export function panBy(dx: number, dy: number): void {
-	throw new Error('not implemented');
+	const before = get(viewport);
+	const clamped = clampOrigin(before.x + dx, before.y + dy, before.scale);
+	viewport.set({ x: clamped.x, y: clamped.y, scale: before.scale });
 }
