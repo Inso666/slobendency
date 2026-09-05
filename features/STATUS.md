@@ -18,8 +18,8 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-10 | Kanten und Signaturenkatalog | fertig | — | gemergt 05.09. 15:35 |
 | F-11 | Selektion, Hervorhebung, Dimming | fertig | — | gemergt 05.09. 18:20 |
 | F-12 | Zoom und Pan | fertig | — | gemergt 05.09. 20:05 |
-| F-13 | Feature-Formular | in QA | feature/F-13-feature-formular | 398 Unit, 94 E2E grün |
-| F-14 | Verzeichnis | offen | — | — |
+| F-13 | Feature-Formular | fertig | — | gemergt 06.09. 00:20 |
+| F-14 | Verzeichnis | in Tests | feature/F-14-verzeichnis | Test-Agent beauftragt |
 | F-15 | Detail-Kartusche | offen | — | Auflage: den Knopf Bearbeiten aus F-13 in die Kartusche übernehmen, nicht danebenstellen |
 | F-16 | Kontextmenü und Verbindungsvorgang | offen | — | Nachzuholen: Test für Escape bricht Verbindungsvorgang ab (FR-13); in F-11 mangels Oberfläche nicht fahrbar |
 | F-17 | Beziehungen bearbeiten und löschen | offen | — | — |
