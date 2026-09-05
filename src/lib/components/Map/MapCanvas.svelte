@@ -7,16 +7,27 @@
 	(FeatureNodes.svelte) weiter. Marker (Pfeilspitzen) werden bereits hier definiert, weil sie
 	zur SVG-Struktur gehören, die der spätere Bildexport (NFR-43) wiederverwendet; gezeichnet
 	werden sie erst mit den Kanten aus F-10.
+
+	F-10 · Kanten und Signaturenkatalog (features/F-10-kanten.md): Platzierungen werden hier
+	einmal berechnet und an Edges.svelte weitergegeben, damit Kanten auf versetzte Features an
+	deren tatsächlich gerenderten Punkten enden. Die Zeichenerklärung (Legend.svelte) liegt als
+	Kartusche über der Kartenfläche, außerhalb des SVG, weil sie fester Bestandteil des
+	Bildschirms ist, nicht des exportierten Bildes.
 -->
 <script lang="ts">
 	import { VIEWBOX } from '../../layout/scales';
+	import { placeFeatures } from '../../layout/jitter';
 	import type { FeatureMap } from '../../model/types';
 	import Regions from './Regions.svelte';
 	import Grid from './Grid.svelte';
 	import Axes from './Axes.svelte';
+	import Edges from './Edges.svelte';
 	import FeatureNodes from './FeatureNodes.svelte';
+	import Legend from './Legend.svelte';
 
 	let { map, domainMax }: { map: FeatureMap; domainMax: number } = $props();
+
+	let placements = $derived(placeFeatures(map, domainMax));
 </script>
 
 <svg
@@ -63,8 +74,11 @@
 	<Regions {domainMax} />
 	<Grid {domainMax} />
 	<Axes {domainMax} />
+	<Edges {map} {placements} />
 	<FeatureNodes {map} {domainMax} />
 </svg>
+
+<Legend />
 
 <style>
 	.map {
