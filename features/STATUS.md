@@ -14,7 +14,7 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-06 | DSL-Serializer | fertig | — | gemergt 05.09. 08:20 |
 | F-07 | Vorbedingungen und Zyklen | fertig | — | gemergt 05.09. 09:10 |
 | F-08 | Kartengerüst | fertig | — | gemergt 05.09. 11:00 |
-| F-09 | Feature-Signaturen und Jitter | in Tests | feature/F-09-feature-signaturen | Test-Agent beauftragt |
+| F-09 | Feature-Signaturen und Jitter | in Arbeit | feature/F-09-feature-signaturen | 29 Tests rot |
 | F-10 | Kanten und Signaturenkatalog | offen | — | — |
 | F-11 | Selektion, Hervorhebung, Dimming | offen | — | — |
 | F-12 | Zoom und Pan | offen | — | — |
@@ -63,6 +63,16 @@ den Wertebereich 22 und säße bei größeren Karten falsch, ihm liegt also kein
 verallgemeinerbares Prinzip zugrunde, sondern eine Handkorrektur im statischen Entwurf. Der
 Entwurf bleibt verbindlich für Farben, Typografie, Signaturen und Anordnung — nicht für eine
 Einzelkoordinate, die seiner eigenen Beschriftungsregel widerspricht.
+
+**Winkel im Jitter (05.09.).** PRD 7.3 schreibt
+`winkel <- (2 pi mal Gruppenindex / Gruppengroesse) + (seed mod 360) Grad`, setzt für den
+zweiten Summanden also ein Gradzeichen und verlangt damit die Umrechnung mit `pi/180`.
+`features/F-09-feature-signaturen.md` liest denselben Summanden als Bogenmaß. Maßgeblich ist
+die PRD; `CLAUDE.md` legt ausdrücklich fest, dass sie bei Widerspruch zu allem anderen
+gewinnt. Beide Lesarten wären deterministisch, aber nur eine ist die maßgebliche. Die
+vorgelegten Tests prüfen keine winkelabhängige Koordinate, sondern Ankerpunkt, Radius,
+Determinismus und Gruppenisolation; die Entscheidung ist damit umkehrbar, ohne Tests zu
+berühren.
 
 ## Sessionprotokoll
 
