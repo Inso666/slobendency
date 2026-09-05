@@ -13,7 +13,7 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-05 | DSL-Parser | fertig | — | gemergt 05.09. 07:05 |
 | F-06 | DSL-Serializer | fertig | — | gemergt 05.09. 08:20 |
 | F-07 | Vorbedingungen und Zyklen | fertig | — | gemergt 05.09. 09:10 |
-| F-08 | Kartengerüst | in Arbeit | feature/F-08-kartengeruest | 25 Tests rot (2412c0a) |
+| F-08 | Kartengerüst | in QA | feature/F-08-kartengeruest | 301 Unit, 18 E2E grün (f5e4903) |
 | F-09 | Feature-Signaturen und Jitter | offen | — | — |
 | F-10 | Kanten und Signaturenkatalog | offen | — | — |
 | F-11 | Selektion, Hervorhebung, Dimming | offen | — | — |
@@ -54,6 +54,15 @@ Beispiel ist Anschauung und nicht byteverbindlich. Kein ableitbares Schema erzeu
 Leerzeichen, weder vor noch hinter dem Komma, womit der einzige normative Satz übrig bleibt.
 Die Aufwandsspalte fluchtet damit weiterhin, und DSL-08 erlaubt das Leerzeichen vor dem Komma
 ausdrücklich.
+
+**Waagrechte Lage der Reviernamen (05.09.).** `features/F-08-kartengeruest.md` verlangt den
+Reviernamen „mittig im Revier". `design/03-seekarte.html` setzt die linke Spalte dagegen auf
+`x="330"`, während die geometrische Mitte bei 300 liegt; die rechte Spalte trifft ihre Mitte
+mit `x="740"` exakt. Maßgeblich ist die Featurebeschreibung: mittig. Der Wert 330 gilt nur für
+den Wertebereich 22 und säße bei größeren Karten falsch, ihm liegt also kein
+verallgemeinerbares Prinzip zugrunde, sondern eine Handkorrektur im statischen Entwurf. Der
+Entwurf bleibt verbindlich für Farben, Typografie, Signaturen und Anordnung — nicht für eine
+Einzelkoordinate, die seiner eigenen Beschriftungsregel widerspricht.
 
 ## Sessionprotokoll
 
