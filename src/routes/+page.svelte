@@ -9,6 +9,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { initTheme, theme, type Theme } from '$lib/store/theme';
+	import { initPersistence } from '$lib/store/persistence';
+
+	// Synchron beim Aufbau der Komponente, nicht in onMount: FR-72 verlangt, dass der
+	// gespeicherte Bestand vor dem ersten Rendern der Karte wiederhergestellt ist.
+	initPersistence();
 
 	onMount(() => {
 		initTheme();
