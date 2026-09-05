@@ -27,6 +27,7 @@
 	--magenta: #b01777; /* Vorsicht: schließt aus */
 	--sea: #3b7c8a; /* hängt zusammen */
 	--hatch-opacity: 0.14;
+	--dim-opacity: 0.24; /* Abgedunkelte Elemente bei aktiver Selektion (F-11, FR-43) */
 }
 
 /* ── Nachttafel ───────────────────────────────────── */
@@ -47,6 +48,7 @@
 	--magenta: #e4609f;
 	--sea: #68bcc7;
 	--hatch-opacity: 0.13;
+	--dim-opacity: 0.3; /* F-11, Abschnitt „Darstellung": 0,3 in der Nachttafel statt 0,24 */
 }
 
 *,
@@ -138,6 +140,13 @@ button {
 .scope .lbl {
 	letter-spacing: 0.02em;
 }
+/* Fasst Beschriftung und Umschalter eines Kopfband-Reglers zusammen, damit beide bei wenig
+   Platz gemeinsam umbrechen, statt sich zu trennen (F-11, Umschalter „Hervorhebung"). */
+.scope-item {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
 
 .btn {
 	background: transparent;
@@ -222,5 +231,20 @@ button {
 	}
 	.scope {
 		margin-left: 0;
+	}
+	/* Kein einzelnes Reglerpaar aus dem Design (design/03-seekarte.html) sieht bei 375 px Platz
+	   neben dem Titel vor; statt horizontal zu überlaufen, brechen Kopfband und Regler um
+	   (CLAUDE.md, QA-Abgleich: kein horizontales Scrollen bei 375 px). */
+	.ribbon {
+		flex-wrap: wrap;
+		height: auto;
+		min-height: 60px;
+		padding: 10px 20px;
+		row-gap: 8px;
+	}
+	.scope {
+		flex-wrap: wrap;
+		justify-content: flex-end;
+		row-gap: 6px;
 	}
 }

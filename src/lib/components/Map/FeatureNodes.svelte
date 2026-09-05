@@ -1,14 +1,24 @@
 <!--
 	F-09 · Feature-Signaturen und Jitter (features/F-09-feature-signaturen.md, Abschnitt „Umfang").
+	F-11 · Selektion, Hervorhebung, Dimming (features/F-11-selektion.md, Abschnitt „Darstellung").
 
 	Zeichnet die Feature-Signaturen (Punkt, Name, Lotung, ggf. Ankerkreuz) auf Basis von
 	src/lib/layout/jitter.ts. Anzeigenamen laufen ausschließlich über Svelte-Textbindung
 	(NFR-21) — kein `{@html}`, kein injizierbares Markup.
+
+	Selektion (Klick, FR-40) sowie Halo und Dimming leiten sich aus src/lib/store/highlight.ts
+	und src/lib/store/selection.ts ab (F-11) — die Regel, was hervorgehoben wird, ist bereits
+	dort entschieden; hier wird nur gezeichnet.
 -->
 <script lang="ts">
 	import { placeFeatures, type Placement } from '../../layout/jitter';
 	import { PLOT } from '../../layout/scales';
 	import type { Feature, FeatureId, FeatureMap } from '../../model/types';
+	import { highlight } from '../../store/highlight';
+	import { selectedId } from '../../store/selection';
+
+	/** Radius des Halo-Kreises um das selektierte Feature (F-11, Abschnitt „Darstellung"). */
+	const HALO_RADIUS = 15;
 
 	let { map, domainMax }: { map: FeatureMap; domainMax: number } = $props();
 
@@ -66,6 +76,15 @@
 	}
 
 	let anchors = $derived(anchorsOf(placements));
+
+	/** Klick auf ein Feature selektiert es (FR-40); die Karte reagiert darauf nie selbst mit
+	 * einer eigenen Ableitung der Hervorhebung — das übernimmt store/highlight.ts. Bricht die
+	 * Ereigniskette ab, damit MapCanvas.svelte den Klick nicht zusätzlich als Klick auf freie
+	 * Fläche wertet (F-11, Abschnitt „Interaktion"). */
+	function selectFeature(event: MouseEvent, id: FeatureId): void {
+		event.stopPropagation();
+		selectedId.set(id);
+	}
 </script>
 
 <g class="nodes">
@@ -91,7 +110,23 @@
 	{#each placements as placement (placement.id)}
 		{@const feature = featureOf(placement.id)}
 		{@const flipLeft = nearRightEdge(placement.x)}
-		<g class="node">
+		{@const isSelected = placement.id === $selectedId}
+		{@const isDimmed = $highlight !== null && !$highlight.features.has(placement.id)}
+		<g
+			class="node"
+			class:sel={isSelected}
+			class:dim={isDimmed}
+			onclick={(event) => selectFeature(event, placement.id)}
+		>
+			{#if isSelected}
+				<circle
+					class="halo"
+					data-testid="feature-halo-{placement.id}"
+					cx={placement.x}
+					cy={placement.y}
+					r={HALO_RADIUS}
+				/>
+			{/if}
 			<circle
 				data-testid="feature-node-{placement.id}"
 				cx={placement.x}
@@ -119,6 +154,9 @@
 </g>
 
 <style>
+	.node {
+		cursor: pointer;
+	}
 	.node circle {
 		fill: var(--ink);
 		stroke: var(--paper);
@@ -137,6 +175,25 @@
 		font-family: 'Azeret Mono', monospace;
 		font-size: 10.5px;
 		fill: var(--ink-soft);
+	}
+	/* Selektiertes Feature: Punkt in --magenta, Name in 600 (F-11, Abschnitt „Darstellung"). */
+	.node.sel circle {
+		fill: var(--magenta);
+	}
+	.node.sel text {
+		font-weight: 600;
+	}
+	/* Halo-Kreis um das selektierte Feature (F-11, Abschnitt „Darstellung"). Selektor eine Stufe
+	   spezifischer als „.node circle", damit dessen Grundfarben (Tinte/Papier) hier nicht
+	   greifen — der Halo ist selbst ein Kreis innerhalb von .node. */
+	.node circle.halo {
+		fill: none;
+		stroke: var(--magenta);
+		stroke-width: 1.2;
+	}
+	/* Abgedunkelte Features bleiben sichtbar, treten aber deutlich zurück (FR-43). */
+	.node.dim {
+		opacity: var(--dim-opacity);
 	}
 	.anchor {
 		stroke: var(--ink-soft);

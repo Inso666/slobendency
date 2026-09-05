@@ -14,13 +14,23 @@
 	Kantenbeschriftungen sind im Grundzustand unsichtbar (FR-45); die Sichtbarkeit bei
 	Selektion/Hover liefert erst F-11. Beschriftungen laufen ausschließlich über Svelte-
 	Textbindung (NFR-21) — kein `{@html}`.
+
+	F-11 · Selektion, Hervorhebung, Dimming (features/F-11-selektion.md): Kanten und die an
+	Feature-Zielen hängenden Ring-/Durchstreichungssignaturen dimmen nach store/highlight.ts,
+	ohne die Regel hier erneut zu formulieren. Kantenbeschriftungen werden ausschließlich bei
+	Hervorhebung oder Hover eingeblendet (FR-45) — Hover ist reiner Anzeigezustand dieser
+	Komponente, keine Fachregel.
 -->
 <script lang="ts">
 	import { layoutEdges } from '../../layout/edges';
 	import type { FeatureMap, RelationType } from '../../model/types';
 	import type { Placement } from '../../layout/jitter';
+	import { highlight, relationKey } from '../../store/highlight';
 
 	let { map, placements }: { map: FeatureMap; placements: Placement[] } = $props();
+
+	/** Kennung der Beziehung, deren Kante gerade mit der Maus überfahren wird (F-11, FR-45). */
+	let hoveredKey = $state<string | null>(null);
 
 	/** Radius des Vorbedingungsrings (design/03-seekarte.html, Klasse `.ring`). */
 	const RING_RADIUS = 15;
@@ -62,17 +72,36 @@
 
 <g class="edges">
 	{#each geometries as g (`${g.relation.from}→${g.relation.to}·${g.relation.type}`)}
+		{@const key = relationKey(g.relation)}
+		{@const isHighlighted = $highlight !== null && $highlight.relations.has(key)}
+		{@const isDimmed = $highlight !== null && !isHighlighted}
+		{@const showLabel = isHighlighted || hoveredKey === key}
 		<line
 			data-testid="edge-{g.relation.from}-{g.relation.to}-{g.relation.type}"
 			class="edge {EDGE_CLASS[g.relation.type]}"
+			class:dim={isDimmed}
 			x1={g.x1}
 			y1={g.y1}
 			x2={g.x2}
 			y2={g.y2}
 			marker-end={MARKER[g.relation.type]}
 		/>
+		<!-- Unsichtbarer, breiterer Trefferbereich für den Hover (FR-45): die sichtbare Linie ist
+			 nur 1,4 Einheiten breit, bei `relates` zusätzlich gestrichelt — beides macht sie als
+			 Zeigerziel unzuverlässig klein bzw. lückenhaft. -->
+		<line
+			class="edge-hitbox"
+			x1={g.x1}
+			y1={g.y1}
+			x2={g.x2}
+			y2={g.y2}
+			onmouseenter={() => (hoveredKey = key)}
+			onmouseleave={() => {
+				if (hoveredKey === key) hoveredKey = null;
+			}}
+		/>
 
-		{#if g.relation.label}
+		{#if g.relation.label && showLabel}
 			<text
 				data-testid="edge-label-{g.relation.from}-{g.relation.to}-{g.relation.type}"
 				class="edge-label"
@@ -88,6 +117,7 @@
 			<g
 				data-testid="edge-crossmark-{g.relation.from}-{g.relation.to}"
 				class="crossmark"
+				class:dim={isDimmed}
 				transform="rotate({g.crossMark.angle} {g.crossMark.x} {g.crossMark.y})"
 			>
 				<line
@@ -108,17 +138,27 @@
 
 	{#each ringTargets as id (id)}
 		{@const p = placementById.get(id)}
+		{@const isDimmed = $highlight !== null && !$highlight.features.has(id)}
 		{#if p}
-			<circle data-testid="edge-ring-{id}" class="ring" cx={p.x} cy={p.y} r={RING_RADIUS} />
+			<circle
+				data-testid="edge-ring-{id}"
+				class="ring"
+				class:dim={isDimmed}
+				cx={p.x}
+				cy={p.y}
+				r={RING_RADIUS}
+			/>
 		{/if}
 	{/each}
 
 	{#each strikeTargets as id (id)}
 		{@const p = placementById.get(id)}
+		{@const isDimmed = $highlight !== null && !$highlight.features.has(id)}
 		{#if p}
 			<line
 				data-testid="edge-strike-{id}"
 				class="strike"
+				class:dim={isDimmed}
 				x1={p.x - STRIKE_HALF}
 				y1={p.y + STRIKE_HALF}
 				x2={p.x + STRIKE_HALF}
@@ -132,6 +172,12 @@
 	.edge {
 		fill: none;
 		stroke-width: 1.4;
+	}
+	.edge-hitbox {
+		fill: none;
+		stroke: transparent;
+		stroke-width: 12;
+		cursor: pointer;
 	}
 	.e-req {
 		stroke: var(--ink);
@@ -148,7 +194,6 @@
 		stroke-width: 1.4;
 	}
 	.edge-label {
-		display: none;
 		font-family: 'Karla', sans-serif;
 		font-size: 11px;
 		fill: var(--ink-soft);
@@ -166,5 +211,13 @@
 	.strike {
 		stroke: var(--magenta);
 		stroke-width: 1.6;
+	}
+	/* Abgedunkelte Kanten und Zielsignaturen bleiben sichtbar, treten aber deutlich zurück
+	   (FR-43); der Opazitätswert ist der Tafel-Token aus src/app.css (F-11). */
+	.edge.dim,
+	.ring.dim,
+	.strike.dim,
+	.crossmark.dim {
+		opacity: var(--dim-opacity);
 	}
 </style>

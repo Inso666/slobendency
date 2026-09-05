@@ -11,6 +11,7 @@
 	import { initTheme, theme, type Theme } from '$lib/store/theme';
 	import { initPersistence } from '$lib/store/persistence';
 	import { map } from '$lib/store/mapStore';
+	import { highlightMode } from '$lib/store/selection';
 	import { domainMaxOf } from '$lib/layout/scales';
 	import MapCanvas from '$lib/components/Map/MapCanvas.svelte';
 
@@ -36,14 +37,39 @@
 			<span>Blatt 1 · Impact / Effort</span>
 		</div>
 		<div class="scope">
-			<span class="lbl">Tafel</span>
-			<span class="sw" role="group" aria-label="Farbtafel">
-				<button type="button" aria-pressed={$theme === 'light'} onclick={() => chooseTheme('light')}>
-					Tag
-				</button>
-				<button type="button" aria-pressed={$theme === 'dark'} onclick={() => chooseTheme('dark')}>
-					Nacht
-				</button>
+			<span class="scope-item">
+				<span class="lbl">Hervorhebung</span>
+				<span class="sw" role="group" aria-label="Hervorhebung">
+					<button
+						type="button"
+						aria-pressed={$highlightMode === 'direct'}
+						onclick={() => highlightMode.set('direct')}
+					>
+						Nur direkte
+					</button>
+					<button
+						type="button"
+						aria-pressed={$highlightMode === 'transitive'}
+						onclick={() => highlightMode.set('transitive')}
+					>
+						Transitiv
+					</button>
+				</span>
+			</span>
+			<span class="scope-item">
+				<span class="lbl">Tafel</span>
+				<span class="sw" role="group" aria-label="Farbtafel">
+					<button
+						type="button"
+						aria-pressed={$theme === 'light'}
+						onclick={() => chooseTheme('light')}
+					>
+						Tag
+					</button>
+					<button type="button" aria-pressed={$theme === 'dark'} onclick={() => chooseTheme('dark')}>
+						Nacht
+					</button>
+				</span>
 			</span>
 		</div>
 	</header>
