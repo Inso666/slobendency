@@ -129,6 +129,38 @@ button {
 	color: var(--ink-soft);
 	margin-top: 2px;
 }
+.acts {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	flex-wrap: wrap;
+}
+/* Menü „Ansicht" (F-12, Abschnitt „Verhalten", Zeile „Zurücksetzen"). */
+.view-menu {
+	position: relative;
+}
+.view-menu-panel {
+	position: absolute;
+	top: calc(100% + 6px);
+	left: 0;
+	z-index: 6;
+	min-width: 200px;
+	padding: 4px;
+}
+.view-menu-panel button {
+	display: block;
+	width: 100%;
+	text-align: left;
+	background: transparent;
+	border: 0;
+	padding: 8px 10px;
+	font-size: 13.5px;
+	cursor: pointer;
+}
+.view-menu-panel button:hover {
+	background: var(--hover);
+}
+
 .scope {
 	margin-left: auto;
 	display: flex;
