@@ -19,7 +19,7 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-11 | Selektion, Hervorhebung, Dimming | fertig | — | gemergt 05.09. 18:20 |
 | F-12 | Zoom und Pan | fertig | — | gemergt 05.09. 20:05 |
 | F-13 | Feature-Formular | fertig | — | gemergt 06.09. 00:20 |
-| F-14 | Verzeichnis | in Tests | feature/F-14-verzeichnis | Test-Agent beauftragt |
+| F-14 | Verzeichnis | in Arbeit | feature/F-14-verzeichnis | 14 Unit- und 21 E2E-Tests rot committet |
 | F-15 | Detail-Kartusche | offen | — | Auflage: den Knopf Bearbeiten aus F-13 in die Kartusche übernehmen, nicht danebenstellen |
 | F-16 | Kontextmenü und Verbindungsvorgang | offen | — | Nachzuholen: Test für Escape bricht Verbindungsvorgang ab (FR-13); in F-11 mangels Oberfläche nicht fahrbar |
 | F-17 | Beziehungen bearbeiten und löschen | offen | — | — |
@@ -82,6 +82,21 @@ Text erreichbaren Knopf *Bearbeiten*, sichtbar solange ein Feature gewählt ist.
 samt Bearbeitungsmodus gehört unstrittig zu F-13, und ohne Auslöser wäre das
 Akzeptanzkriterium nicht prüfbar. F-15 übernimmt diesen Knopf später in die Kartusche, statt
 einen zweiten danebenzustellen — sonst stünde dieselbe Bedienhandlung zweimal.
+
+**Bedienelement der Sortierung, FR-53 (05.09.).** `features/F-14-verzeichnis.md` verlangt die
+Aktion „Sortierung wählen", nennt aber kein Bedienelement; `design/03-seekarte.html` zeigt im
+Kopf des Verzeichnisses nur die Zeile `14 Features · nach Impact` und keinen Schalter.
+Festgelegt: ein Auswahlfeld mit der Beschriftung *Sortierung* und den Optionen *Anzeigename*,
+*Nutzen*, *Aufwand*. Ohne Bedienelement wäre die Fachregel nicht bedienbar und das
+Akzeptanzkriterium nicht prüfbar; ein Auswahlfeld ist die kleinste Form, die drei Zustände
+über Rolle und Text erreichbar macht (AK Tastaturbedienung). Die Kopfzeile aus dem Entwurf
+bleibt unberührt und nennt weiterhin die aktive Sortierung.
+
+**Form der Rückfrage beim Löschen, FR-05 (05.09.).** Weder PRD noch Entwurf legen fest, wie die
+Rückfrage erscheint. Festgelegt: `window.confirm()` mit der Anzahl betroffener Kanten in der
+Nachricht. Der Entwurf enthält kein Muster für einen Bestätigungsdialog, und FR-05 fordert nur
+Rückfrage und Zahl. Revidierbar, sobald F-18 (FR-62) oder F-23 (FR-75) ein eigenes Dialogmuster
+einführen — dann wird diese Stelle darauf umgestellt, statt zwei Muster nebeneinander zu haben.
 
 ## Sessionprotokoll
 
