@@ -15,8 +15,8 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-07 | Vorbedingungen und Zyklen | fertig | — | gemergt 05.09. 09:10 |
 | F-08 | Kartengerüst | fertig | — | gemergt 05.09. 11:00 |
 | F-09 | Feature-Signaturen und Jitter | fertig | — | gemergt 05.09. 13:10 |
-| F-10 | Kanten und Signaturenkatalog | in QA | feature/F-10-kanten | 345 Unit, 45 E2E grün (2e1f6dc) |
-| F-11 | Selektion, Hervorhebung, Dimming | offen | — | — |
+| F-10 | Kanten und Signaturenkatalog | fertig | — | gemergt 05.09. 15:35 |
+| F-11 | Selektion, Hervorhebung, Dimming | in Tests | feature/F-11-selektion | Test-Agent beauftragt |
 | F-12 | Zoom und Pan | offen | — | — |
 | F-13 | Feature-Formular | offen | — | — |
 | F-14 | Verzeichnis | offen | — | — |
