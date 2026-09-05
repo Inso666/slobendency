@@ -9,6 +9,14 @@
 	Selektion (Klick, FR-40) sowie Halo und Dimming leiten sich aus src/lib/store/highlight.ts
 	und src/lib/store/selection.ts ab (F-11) — die Regel, was hervorgehoben wird, ist bereits
 	dort entschieden; hier wird nur gezeichnet.
+
+	F-12 · Zoom und Pan (features/F-12-zoom-pan.md, Abschnitt „Verhalten"): Ein Zug, der auf
+	einem Feature beginnt, verschiebt die Karte nicht, sondern selektiert (dort gilt der Klick
+	der Selektion) — Maus- und Touch-Beginn stoppen ihre Ausbreitung deshalb hier, bevor
+	MapCanvas.svelte sie als Ziehen auf freier Fläche werten könnte. Punktradius und
+	Schriftgrößen werden gegen den Maßstab gerechnet, damit sie bei Maßstab 0,5 nicht unter die
+	geforderte Mindestschriftgröße von 9 px fallen, bei größerem Maßstab aber regulär mit
+	skalieren (F-12, Abschnitt „Verhalten").
 -->
 <script lang="ts">
 	import { placeFeatures, type Placement } from '../../layout/jitter';
@@ -20,10 +28,25 @@
 	/** Radius des Halo-Kreises um das selektierte Feature (F-11, Abschnitt „Darstellung"). */
 	const HALO_RADIUS = 15;
 
-	let { map, domainMax }: { map: FeatureMap; domainMax: number } = $props();
+	let { map, domainMax, scale = 1 }: { map: FeatureMap; domainMax: number; scale?: number } =
+		$props();
 
 	/** Radius des Signaturpunkts (F-09, Abschnitt „Darstellung"). */
 	const NODE_RADIUS = 8;
+
+	/** Schriftgröße des Feature-Namens bei Maßstab 1 (F-09, Abschnitt „Darstellung"). */
+	const LABEL_FONT_SIZE = 13;
+	/** Schriftgröße der Lotung bei Maßstab 1 (F-09, Abschnitt „Darstellung"). */
+	const LOTUNG_FONT_SIZE = 10.5;
+	/** Mindestschriftgröße auf dem Bildschirm, unabhängig vom Maßstab (F-12, Abschnitt
+	 * „Verhalten"). */
+	const MIN_SCREEN_FONT_SIZE = 9;
+
+	/** Faktor, der Punktradius und Schriftgrößen gegen den Maßstab rechnet: oberhalb der
+	 * Schwelle, ab der Maßstab 1 bereits genügend Bildschirmgröße liefert, bleibt er 1 (reguläre
+	 * Skalierung mit dem Zoom); darunter — auf dem Weg zu MIN_SCALE — wächst er gerade so, dass
+	 * die Bildschirmschriftgröße nie unter MIN_SCREEN_FONT_SIZE fällt. */
+	let sizeFactor = $derived(Math.max(1, MIN_SCREEN_FONT_SIZE / (LABEL_FONT_SIZE * scale)));
 
 	/** Halbe Länge des Ankerkreuzes — 10 Einheiten Gesamtlänge (F-09, Abschnitt „Darstellung"). */
 	const ANCHOR_HALF_LENGTH = 5;
@@ -85,6 +108,14 @@
 		event.stopPropagation();
 		selectedId.set(id);
 	}
+
+	/** Stoppt Maus-/Touch-Beginn auf einem Feature, damit MapCanvas.svelte daraus kein Ziehen
+	 * auf freier Fläche macht (F-12, Abschnitt „Verhalten": „Ein Ziehen, das auf einem Feature
+	 * beginnt, verschiebt die Karte nicht"). Der Klick selbst (Selektion) läuft unbeeinflusst
+	 * über selectFeature() weiter. */
+	function stopDragStart(event: MouseEvent | TouchEvent): void {
+		event.stopPropagation();
+	}
 </script>
 
 <g class="nodes">
@@ -117,6 +148,8 @@
 			class:sel={isSelected}
 			class:dim={isDimmed}
 			onclick={(event) => selectFeature(event, placement.id)}
+			onmousedown={stopDragStart}
+			ontouchstart={stopDragStart}
 		>
 			{#if isSelected}
 				<circle
@@ -124,20 +157,21 @@
 					data-testid="feature-halo-{placement.id}"
 					cx={placement.x}
 					cy={placement.y}
-					r={HALO_RADIUS}
+					r={HALO_RADIUS * sizeFactor}
 				/>
 			{/if}
 			<circle
 				data-testid="feature-node-{placement.id}"
 				cx={placement.x}
 				cy={placement.y}
-				r={NODE_RADIUS}
+				r={NODE_RADIUS * sizeFactor}
 			/>
 			<text
 				data-testid="feature-label-{placement.id}"
 				x={placement.x + (flipLeft ? -LABEL_OFFSET_X : LABEL_OFFSET_X)}
 				y={placement.y + LABEL_OFFSET_Y}
 				text-anchor={flipLeft ? 'end' : 'start'}
+				style:font-size="{LABEL_FONT_SIZE * sizeFactor}px"
 			>
 				{labelOf(feature)}
 			</text>
@@ -146,6 +180,7 @@
 				data-testid="feature-lotung-{placement.id}"
 				x={placement.x + LABEL_OFFSET_X}
 				y={placement.y + LOTUNG_OFFSET_Y}
+				style:font-size="{LOTUNG_FONT_SIZE * sizeFactor}px"
 			>
 				{lotungOf(feature)}
 			</text>
