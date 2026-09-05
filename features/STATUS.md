@@ -9,7 +9,7 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-01 | Projektgerüst und Kartentafel | fertig | — | gemergt 05.09. 00:05 |
 | F-02 | Domänenmodell und Invarianten | fertig | — | gemergt 05.09. 00:35 |
 | F-03 | Kartenstore und Kommandos | fertig | — | gemergt 05.09. 01:15 |
-| F-04 | Persistenz im LocalStorage | in Tests | feature/F-04-persistenz | Test-Agent beauftragt |
+| F-04 | Persistenz im LocalStorage | in Arbeit | feature/F-04-persistenz | 16 Tests rot (fc750a7) |
 | F-05 | DSL-Parser | offen | — | Vor Beginn klären: Kennung-Zeichensatz PRD 3.1 gegen DSL-Grammatik PRD 4.2 (siehe features/qa/F-02.md) |
 | F-06 | DSL-Serializer | offen | — | — |
 | F-07 | Vorbedingungen und Zyklen | offen | — | — |
