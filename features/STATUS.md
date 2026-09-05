@@ -17,7 +17,7 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-09 | Feature-Signaturen und Jitter | fertig | — | gemergt 05.09. 13:10 |
 | F-10 | Kanten und Signaturenkatalog | fertig | — | gemergt 05.09. 15:35 |
 | F-11 | Selektion, Hervorhebung, Dimming | fertig | — | gemergt 05.09. 18:20 |
-| F-12 | Zoom und Pan | in Tests | feature/F-12-zoom-pan | Test-Agent beauftragt |
+| F-12 | Zoom und Pan | in Arbeit | feature/F-12-zoom-pan | 29 Tests rot (cfdc823) |
 | F-13 | Feature-Formular | offen | — | — |
 | F-14 | Verzeichnis | offen | — | — |
 | F-15 | Detail-Kartusche | offen | — | — |
