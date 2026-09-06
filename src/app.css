@@ -202,6 +202,12 @@ button {
 	background: var(--ink);
 	opacity: 0.86;
 }
+/* Kopfband-Knöpfe, die einen Zustand schalten (F-14: „Verzeichnis"), zeigen ihn wie die
+   Umschalter daneben an. */
+.btn[aria-pressed='true'] {
+	background: var(--hover);
+	border-color: var(--hair);
+}
 
 .sw {
 	display: flex;
