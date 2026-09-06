@@ -20,7 +20,7 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-12 | Zoom und Pan | fertig | — | gemergt 05.09. 20:05 |
 | F-13 | Feature-Formular | fertig | — | gemergt 06.09. 00:20 |
 | F-14 | Verzeichnis | in Arbeit | feature/F-14-verzeichnis | 14 Unit- und 21 E2E-Tests rot committet |
-| F-15 | Detail-Kartusche | offen | — | Auflage: den Knopf Bearbeiten aus F-13 in die Kartusche übernehmen, nicht danebenstellen |
+| F-15 | Detail-Kartusche | in Tests | feature/F-15-detail-kartusche | Auflage: den Knopf Bearbeiten aus F-13 in die Kartusche übernehmen, nicht danebenstellen |
 | F-16 | Kontextmenü und Verbindungsvorgang | offen | — | Nachzuholen: Test für Escape bricht Verbindungsvorgang ab (FR-13); in F-11 mangels Oberfläche nicht fahrbar |
 | F-17 | Beziehungen bearbeiten und löschen | offen | — | — |
 | F-18 | Import-Dialog | offen | — | — |
