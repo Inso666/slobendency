@@ -92,11 +92,17 @@ Akzeptanzkriterium nicht prüfbar; ein Auswahlfeld ist die kleinste Form, die dr
 über Rolle und Text erreichbar macht (AK Tastaturbedienung). Die Kopfzeile aus dem Entwurf
 bleibt unberührt und nennt weiterhin die aktive Sortierung.
 
-**Form der Rückfrage beim Löschen, FR-05 (05.09.).** Weder PRD noch Entwurf legen fest, wie die
-Rückfrage erscheint. Festgelegt: `window.confirm()` mit der Anzahl betroffener Kanten in der
-Nachricht. Der Entwurf enthält kein Muster für einen Bestätigungsdialog, und FR-05 fordert nur
-Rückfrage und Zahl. Revidierbar, sobald F-18 (FR-62) oder F-23 (FR-75) ein eigenes Dialogmuster
-einführen — dann wird diese Stelle darauf umgestellt, statt zwei Muster nebeneinander zu haben.
+**Form der Rückfrage beim Löschen, FR-05 (06.09., ersetzt die Festlegung vom 05.09.).** Weder
+PRD noch Entwurf legen fest, wie die Rückfrage erscheint. Zunächst war `window.confirm()`
+festgelegt; das ist zurückgenommen. Festgelegt ist nun ein Dialog in der Seite:
+`role="alertdialog"` mit dem Namen *Feature löschen*, dessen Text die Anzahl betroffener Kanten
+nennt, mit den Knöpfen *Löschen* und *Abbrechen*, als Kartusche über die Token aus `src/app.css`
+gerendert. `design/README.md` hält fest, dass die noch zu entwerfenden Dialoge aus den bereits
+feststehenden Bausteinen Rahmen, Kartusche und Panel gebaut werden; ein natives `confirm` trägt
+keinen dieser Token und wechselt nicht mit der Nachttafel, die der Entwurf als verbindlich
+führt. F-13 hat mit dem Formular als `<dialog>` in der Seite den Präzedenzfall gesetzt, sodass
+diese Wahl ein Muster fortschreibt, statt ein zweites daneben zu stellen. Die zugehörige
+Teständerung an `e2e/F-14-verzeichnis.spec.ts` ist freigegeben (Commit 00fa887).
 
 ## Sessionprotokoll
 
