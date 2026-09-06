@@ -18,9 +18,11 @@
 //   - Aktionen: "Bearbeiten", "Als Start verwenden", "Löschen" (letzteres in --magenta).
 //   - Jede Zeile eines Beziehungsabschnitts enthält einen Knopf, dessen zugänglicher Name mit
 //     dem Anzeigenamen des Gegenübers beginnt; ein Klick darauf selektiert dieses Feature.
-//   - Die Rückfrage vor dem Löschen (FR-05) ist ein role="dialog" mit der Anzahl der
-//     betroffenen Kanten im Text und den Knöpfen "Löschen" und "Abbrechen". Bewusst kein
-//     window.confirm: die Rückfrage muss dem Entwurf folgen und für die Prüfung sichtbar sein.
+//   - Die Rückfrage vor dem Löschen (FR-05) ist ein role="alertdialog" mit dem zugänglichen
+//     Namen "Feature löschen", mit der Anzahl der betroffenen Kanten im Text und den Knöpfen
+//     "Löschen" und "Abbrechen" (features/STATUS.md, Entscheidung vom 06.09. "Rückfragedialog
+//     in F-15 vereinheitlicht mit FR-05-Entscheidung"). Bewusst kein window.confirm: die
+//     Rückfrage muss dem Entwurf folgen und für die Prüfung sichtbar sein.
 //
 // Neu vergebene data-testid (über Rolle/Text nicht eindeutig greifbar, weil dieselben Zahlen
 // auch an den Achsen und in der Lotung der Karte stehen und die Signaturen Eigentext haben):
@@ -37,11 +39,12 @@
 // Bereits vergebene Kennzeichen aus F-09 bis F-11 werden weiterverwendet: feature-node-<id>,
 // feature-halo-<id>, edge-<from>-<to>-<type>.
 //
-// Zu erwartende Rückwirkung auf F-11 (dem Orchestrator gemeldet, nicht selbst geändert):
-// e2e/F-11-selektion.spec.ts wählt in `clickBlankArea` die obere rechte Ecke der Plotfläche als
-// "freie Fläche" — genau dort liegt laut F-15 und design/03-seekarte.html die Kartusche. Sobald
-// sie gerendert wird, fängt sie diesen Klick ab. Der Test dieser Datei klickt deshalb unten
-// rechts. Die Anpassung in F-11 ist eine Teständerung und damit dem Orchestrator vorbehalten.
+// Rückwirkung auf F-11 (features/STATUS.md, Entscheidung vom 06.09.
+// "F-11-Testkonflikt durch die Kartuschenposition"): e2e/F-11-selektion.spec.ts wählte in
+// `clickBlankArea` die obere rechte Ecke der Plotfläche als "freie Fläche" — genau dort liegt
+// laut F-15 und design/03-seekarte.html die Kartusche. Sobald sie gerendert wird, fängt sie
+// diesen Klick ab. Der Test dieser Datei klickt deshalb unten rechts; auf Anweisung des
+// Orchestrators wurde dieselbe Ecke in F-11-selektion.spec.ts übernommen.
 //
 // Der Knopf "Als Start verwenden" startet den Verbindungsvorgang aus F-16; dessen sichtbare
 // Markierung des Startpunkts gehört ausdrücklich zu F-16 und wird hier nicht geprüft. Ebenso
@@ -317,7 +320,7 @@ test.describe('F-15 · Detail-Kartusche', () => {
 
 		await cartouche.getByRole('button', { name: 'Löschen' }).click();
 
-		const rueckfrage = page.getByRole('dialog');
+		const rueckfrage = page.getByRole('alertdialog', { name: 'Feature löschen' });
 		await expect(rueckfrage).toBeVisible();
 		// Vier Kanten sind betroffen: drei ausgehende und eine eingehende.
 		await expect(rueckfrage).toContainText('4');
@@ -341,7 +344,10 @@ test.describe('F-15 · Detail-Kartusche', () => {
 		const cartouche = await openCartouche(page, 'rollen');
 
 		await cartouche.getByRole('button', { name: 'Löschen' }).click();
-		await page.getByRole('dialog').getByRole('button', { name: 'Löschen' }).click();
+		await page
+			.getByRole('alertdialog', { name: 'Feature löschen' })
+			.getByRole('button', { name: 'Löschen' })
+			.click();
 
 		await expect(page.getByTestId('feature-node-rollen')).toHaveCount(0);
 		await expect(page.getByTestId('edge-rollen-sso-requires')).toHaveCount(0);
@@ -361,7 +367,7 @@ test.describe('F-15 · Detail-Kartusche', () => {
 
 		await cartouche.getByRole('button', { name: 'Löschen' }).click();
 
-		await expect(page.getByRole('dialog')).toHaveCount(0);
+		await expect(page.getByRole('alertdialog', { name: 'Feature löschen' })).toHaveCount(0);
 		await expect(page.getByTestId('feature-node-dark')).toHaveCount(0);
 	});
 

@@ -100,7 +100,7 @@ async function clickBlankArea(page: Page): Promise<void> {
 	expect(box, 'Kartenfläche sollte eine sichtbare Bounding Box haben').not.toBeNull();
 	// Oben rechts in der Plotfläche: alle Testkarten dieser Datei verwenden niedrige
 	// Impact-/Effort-Werte, die unten links landen (FR-20/FR-21) — diese Ecke bleibt frei.
-	await map.click({ position: { x: box!.width * 0.95, y: box!.height * 0.05 } });
+	await map.click({ position: { x: box!.width * 0.95, y: box!.height * 0.95 } });
 }
 
 const KETTE: SeedFeature[] = [
