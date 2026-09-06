@@ -40,11 +40,12 @@
 // feature-halo-<id>, edge-<from>-<to>-<type>.
 //
 // Rückwirkung auf F-11 (features/STATUS.md, Entscheidung vom 06.09.
-// "F-11-Testkonflikt durch die Kartuschenposition"): e2e/F-11-selektion.spec.ts wählte in
-// `clickBlankArea` die obere rechte Ecke der Plotfläche als "freie Fläche" — genau dort liegt
-// laut F-15 und design/03-seekarte.html die Kartusche. Sobald sie gerendert wird, fängt sie
-// diesen Klick ab. Der Test dieser Datei klickt deshalb unten rechts; auf Anweisung des
-// Orchestrators wurde dieselbe Ecke in F-11-selektion.spec.ts übernommen.
+// "F-11-Testkonflikt durch die Kartuschenposition, korrigiert"): e2e/F-11-selektion.spec.ts
+// wählte in `clickBlankArea` zunächst die obere rechte Ecke der Plotfläche als "freie Fläche" —
+// genau dort liegt laut F-15 und design/03-seekarte.html die Kartusche. Die zunächst gewählte
+// Ausweichecke unten rechts erwies sich ebenfalls als belegt (dort liegt die Zeichenerklärung
+// aus F-10, `.legend`, ab 1080 px sichtbar). Der Test dieser Datei klickt deshalb auf die obere
+// linke Ecke; dieselbe Ecke wurde in F-11-selektion.spec.ts übernommen.
 //
 // Der Knopf "Als Start verwenden" startet den Verbindungsvorgang aus F-16; dessen sichtbare
 // Markierung des Startpunkts gehört ausdrücklich zu F-16 und wird hier nicht geprüft. Ebenso
@@ -145,16 +146,18 @@ async function openCartouche(page: Page, id: string): Promise<Locator> {
 }
 
 /**
- * Klickt auf freie Kartenfläche (FR-46, F-11). Gewählt ist die untere rechte Ecke der
- * Plotfläche: Sie liegt außerhalb der Kartusche (oben rechts) und ist in den Karten dieser
- * Datei von keinem Feature belegt — dort läge ein Feature mit sehr hohem Aufwand und sehr
- * niedrigem Nutzen.
+ * Klickt auf freie Kartenfläche (FR-46, F-11). Gewählt ist die obere linke Ecke der
+ * Plotfläche (features/STATUS.md, Entscheidung vom 06.09. "F-11-Testkonflikt durch die
+ * Kartuschenposition, korrigiert"): Sie liegt außerhalb der Detail-Kartusche (oben rechts) und
+ * der Zeichenerklärung (unten rechts) und ist in den Karten dieser Datei von keinem Feature
+ * belegt — dort läge ein Feature mit sehr hohem Nutzen und sehr niedrigem Aufwand (Quick Wins);
+ * die Testdaten dieser Datei plotten mit ihrem niedrigen Nutzen dagegen unten links (FR-20/FR-21).
  */
 async function clickBlankArea(page: Page): Promise<void> {
 	const karte = page.getByRole('img', { name: /Streudiagramm/ });
 	const box = await karte.boundingBox();
 	expect(box, 'Testaufbau: Kartenfläche sollte eine Bounding Box haben').not.toBeNull();
-	await karte.click({ position: { x: box!.width * 0.95, y: box!.height * 0.95 } });
+	await karte.click({ position: { x: box!.width * 0.05, y: box!.height * 0.05 } });
 }
 
 /** Waagerechter Mittelpunkt eines Elements, für die Richtung der Pfeilspitze in einer Zeile. */
@@ -355,9 +358,15 @@ test.describe('F-15 · Detail-Kartusche', () => {
 		// Ohne Selektion verschwindet die Kartusche (F-15, Abschnitt "Verhalten").
 		await expect(page.getByTestId('detail-cartouche')).not.toBeVisible();
 
-		const stored = await readStoredMap(page);
-		expect(stored.features.map((f) => f.id)).not.toContain('rollen');
-		expect(stored.relations).toHaveLength(0);
+		// DOM und Store aktualisieren sich sofort; die Persistenz aus src/lib/store/persistence.ts
+		// schreibt aber erst nach DEBOUNCE_MS = 400 ms in den LocalStorage (features/STATUS.md,
+		// Entscheidung vom 06.09. "Debounce-Race im Löschtest von F-15"). expect.poll wartet auf
+		// das Verschwinden statt einmalig sofort zu lesen; Prüfabsicht und Erwartungswerte bleiben
+		// unverändert.
+		await expect
+			.poll(async () => (await readStoredMap(page)).features.map((f) => f.id))
+			.not.toContain('rollen');
+		await expect.poll(async () => (await readStoredMap(page)).relations).toHaveLength(0);
 	});
 
 	// PRD FR-05: Die Rückfrage ist an bestehende Beziehungen geknüpft — ohne sie wird direkt

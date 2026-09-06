@@ -301,8 +301,9 @@
 	}
 	.bearings h4 {
 		margin: 0 0 6px;
-		font-family: 'Karla', sans-serif;
-		font-size: 10px;
+		font-family: 'Fraunces', serif;
+		font-style: italic;
+		font-size: 11px;
 		letter-spacing: 0.2em;
 		text-transform: uppercase;
 		color: var(--ink-soft);
