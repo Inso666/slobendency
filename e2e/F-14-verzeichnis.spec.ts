@@ -24,16 +24,22 @@
 // "Umfang"); die bereits vergebenen Kennzeichen feature-node-<id>, feature-halo-<id>,
 // edge-<from>-<to>-<type> aus F-08 bis F-11 für die Karte selbst.
 //
-// Designentscheidungen dieses Test-Agenten (in den Quellen nicht festgelegt, dem Orchestrator
-// zur Bestätigung vorzulegen, siehe Abschlussbericht):
+// Designentscheidungen dieses Test-Agenten (in den Quellen nicht festgelegt):
 //   1. FR-53 nennt drei Sortierkriterien, aber kein Bedienelement (weder PRD noch
 //      design/03-seekarte.html zeigen eines — das Mockup zeigt nur den Text "nach Impact" als
 //      Beispielzustand). Diese Tests verlangen ein `getByRole('combobox', { name: 'Sortierung'
-//      })` mit den Optionen "Anzeigename", "Nutzen", "Aufwand" (Ubiquitous Language).
-//   2. FR-05 verlangt eine "Rückfrage", legt aber keinen Mechanismus fest. Diese Tests
-//      verwenden `window.confirm()` (Playwright: `page.on('dialog', …)`), dessen Nachricht die
-//      Zahl der betroffenen Kanten enthalten muss — die einfachste Umsetzung, die FR-05 wörtlich
-//      erfüllt, ohne eine in den Quellen nicht vorgesehene weitere Kartusche zu erfinden.
+//      })` mit den Optionen "Anzeigename", "Nutzen", "Aufwand" (Ubiquitous Language). Vom
+//      Orchestrator bestätigt.
+//   2. FR-05 verlangt eine "Rückfrage" für den Fall bestehender Beziehungen. Ursprünglich mit
+//      `window.confirm()` getestet; vom Orchestrator abgelehnt (design/README.md definiert die
+//      Kartusche als das gerahmte Overlay für Detail, Zeichenerklärung UND Dialoge — ein
+//      natives `confirm` trägt keine Token aus src/app.css und wechselt nicht mit der
+//      Nachttafel; F-13 hat mit dem Formular als Dialog in der Seite bereits den Präzedenzfall
+//      gesetzt). Diese Tests verlangen stattdessen einen Dialog in der Seite:
+//      `getByRole('alertdialog', { name: 'Feature löschen' })`, dessen Text die Zahl der
+//      betroffenen Kanten nennt, mit den Knöpfen "Löschen" (bestätigt) und "Abbrechen"
+//      (verwirft) — als Kartusche gerendert (`.cartouche`, Hintergrund über das Token --paper,
+//      wie das Formular aus F-13).
 //
 // F-14, Abschnitt "Nicht Teil dieses Features" schließt "Bottom Sheet auf Mobilgeräten (F-22)"
 // ausdrücklich aus; die im Abschnitt "Umfang" beiläufig erwähnte Vollbild-Darstellung unter
@@ -117,6 +123,13 @@ function rowOf(page: Page, id: string): Locator {
 
 function groupOf(page: Page, quadrant: string): Locator {
 	return page.getByTestId(`directory-group-${quadrant}`);
+}
+
+/** Rückfrage-Dialog beim Löschen eines Features mit Beziehungen (FR-05) — ein Dialog in der
+ * Seite, keine Kartusche mit anderem Namen, damit er sich nicht mit dem Formular-Dialog aus
+ * F-13 ("Feature anlegen" / "Feature bearbeiten") überschneidet. */
+function deleteConfirmDialog(page: Page): Locator {
+	return page.getByRole('alertdialog', { name: 'Feature löschen' });
 }
 
 /** Liest die Feature-Kennungen aller Einträge innerhalb einer Reviergruppe, in
