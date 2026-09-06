@@ -20,7 +20,7 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-12 | Zoom und Pan | fertig | — | gemergt 05.09. 20:05 |
 | F-13 | Feature-Formular | fertig | — | gemergt 06.09. 00:20 |
 | F-14 | Verzeichnis | fertig | — | gemergt 06.09. 21:18 |
-| F-15 | Detail-Kartusche | in QA | feature/F-15-detail-kartusche | Umsetzung fertig (f24450f), 117/120 E2E grün; drei offene Testbefunde unten (Kartuschen-/Legenden-Kollision, Debounce-Race) für den QA-Agenten |
+| F-15 | Detail-Kartusche | fertig | — | gemergt 06.09. 21:38 |
 | F-16 | Kontextmenü und Verbindungsvorgang | offen | — | Nachzuholen: Test für Escape bricht Verbindungsvorgang ab (FR-13); in F-11 mangels Oberfläche nicht fahrbar |
 | F-17 | Beziehungen bearbeiten und löschen | offen | — | — |
 | F-18 | Import-Dialog | offen | — | — |
@@ -165,4 +165,4 @@ nächste Session anfängt.
 |---|---|---|---|
 | 04.–05.09. | manuell | Ausgangslage committet, Weckzyklus gestartet, F-01 durch Tests, Umsetzung, QA und Merge gebracht (2 QA-Befunde behoben: fehlende CSP, Kopfband-Anordnung unter 768 px). | F-02 durch Tests, Umsetzung und QA bringen. |
 | 05.09. | manuell | F-02, F-03 und F-04 fertiggestellt und gemergt. Eine Teständerung in F-04 freigegeben, ein Quellenwiderspruch zum Kennung-Zeichensatz entschieden. | F-05 durch Tests, Umsetzung und QA bringen; dabei die Kennungsprüfung aus F-02 verengen. |
-| 06.09. (Fortsetzung, geweckt 20:47) | geweckt | F-14 durch Umsetzung (ein Fixture-Fehler im Test korrigiert), QA und Merge nach main gebracht. F-15-Umsetzung fertiggestellt; drei Testbefunde (Dialogrolle, Kartuschen-/Legenden-Kollision bei clickBlankArea, Debounce-Race) entschieden und für den QA-Agenten festgehalten. | F-15 durch QA (inkl. der drei festgehaltenen Behebungen) und Merge bringen; danach F-16. |
+| 06.09. (Fortsetzung, geweckt 20:47) | geweckt | F-14 und F-15 vollständig durch Umsetzung, QA und Merge nach main gebracht (F-15-QA behob zusätzlich eine Typografie-Abweichung in der Kartusche). Rebase-Konflikt zwischen beiden Features in src/routes/+page.svelte aufgelöst (Verzeichnis-Panel und Detail-Kartusche bestehen nebeneinander). Gesamtsuite auf main: 427/427 Unit-, 141/141 E2E-Tests grün. | F-16 (Kontextmenü und Verbindungsvorgang) durch Tests, Umsetzung und QA bringen; dabei den nachzuholenden Test für Escape (FR-13) aus der F-16-Anmerkung berücksichtigen. |
