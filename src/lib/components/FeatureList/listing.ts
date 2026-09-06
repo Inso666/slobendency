@@ -31,7 +31,20 @@ export const QUADRANT_ORDER: Quadrant[] = ['quickWins', 'grosseVorhaben', 'neben
  * Leerraum-Filter liefert alle Features unverändert in ihrer bisherigen Reihenfolge.
  */
 export function filterFeatures(features: Feature[], query: string): Feature[] {
-	throw new Error('not implemented');
+	const needle = query.trim().toLowerCase();
+	if (needle === '') return features;
+
+	return features.filter(
+		(feature) =>
+			feature.id.toLowerCase().includes(needle) ||
+			(feature.label ?? '').toLowerCase().includes(needle)
+	);
+}
+
+/** Anzeigename eines Features: `label`, ersatzweise die Kennung (Ubiquitous Language,
+ * features/README.md — "Fehlt er, wird die Kennung angezeigt"). */
+export function displayNameOf(feature: Feature): string {
+	return feature.label ?? feature.id;
 }
 
 /**
@@ -41,7 +54,15 @@ export function filterFeatures(features: Feature[], query: string): Feature[] {
  * Reihenfolge bei Gleichstand.
  */
 export function sortFeatures(features: Feature[], sortBy: SortKey): Feature[] {
-	throw new Error('not implemented');
+	const sorted = [...features];
+
+	if (sortBy === 'label') {
+		return sorted.sort((a, b) =>
+			displayNameOf(a).localeCompare(displayNameOf(b), 'de', { sensitivity: 'base' })
+		);
+	}
+
+	return sorted.sort((a, b) => b[sortBy] - a[sortBy]);
 }
 
 /**
@@ -52,14 +73,43 @@ export function sortFeatures(features: Feature[], sortBy: SortKey): Feature[] {
  * (sortFeatures()) wird hier nicht neu vorgenommen.
  */
 export function groupByQuadrant(features: Feature[], domainMax: number): FeatureListGroup[] {
-	throw new Error('not implemented');
+	return QUADRANT_ORDER.map((quadrant) => ({
+		quadrant,
+		features: features.filter((feature) => quadrantOf(feature, domainMax) === quadrant)
+	})).filter((group) => group.features.length > 0);
 }
+
+/** Beschriftungen der Reviere, wortgleich aus design/03-seekarte.html übernommen. */
+const QUADRANT_LABELS: Record<Quadrant, string> = {
+	quickWins: 'Quick Wins',
+	grosseVorhaben: 'Große Vorhaben',
+	nebenbei: 'Nebenbei',
+	vermeiden: 'Vermeiden'
+};
 
 /** Deutsche Beschriftung eines Reviers für die Gruppenüberschrift im Verzeichnis
  * (design/03-seekarte.html: "Quick Wins", "Große Vorhaben", "Nebenbei", "Vermeiden"). */
 export function quadrantLabel(quadrant: Quadrant): string {
-	throw new Error('not implemented');
+	return QUADRANT_LABELS[quadrant];
 }
+
+/** Beschriftungen der Sortierkriterien in der Sprache der Sprachtabelle (features/README.md:
+ * Anzeigename/`label`, Nutzen/`impact`, Aufwand/`effort`) — zugleich der Wortlaut der Optionen
+ * im Auswahlfeld "Sortierung" und der Kopfzeile "… · nach …". */
+const SORT_LABELS: Record<SortKey, string> = {
+	label: 'Anzeigename',
+	impact: 'Nutzen',
+	effort: 'Aufwand'
+};
+
+/** Beschriftung eines Sortierkriteriums. */
+export function sortLabel(sortBy: SortKey): string {
+	return SORT_LABELS[sortBy];
+}
+
+/** Reihenfolge der Sortierkriterien im Auswahlfeld (FR-53: "Sortierung nach Label, Impact,
+ * Effort"). */
+export const SORT_ORDER: SortKey[] = ['label', 'impact', 'effort'];
 
 // re-exportiert, damit Aufrufer quadrantOf nicht zusätzlich aus model/validation importieren
 // müssen, ohne dass diese Datei die Regel selbst dupliziert (features/README.md, Leitplanke 3).

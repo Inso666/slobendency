@@ -12,6 +12,12 @@
 	Kopfband, neben den — hier noch nicht umgesetzten — Knöpfen „Importieren" und „Exportieren"
 	späterer Features).
 
+	F-14 · Verzeichnis (features/F-14-verzeichnis.md): Knopf „Verzeichnis" im Kopfband klappt das
+	Panel auf und zu (FR-50, standardmäßig eingeklappt); `aria-pressed` spiegelt den Zustand wie
+	bei den übrigen Kopfband-Reglern. Das Verzeichnis selbst besitzt kein Formular — seine Aktion
+	„Bearbeiten" meldet den Wunsch hierher zurück und öffnet dasselbe vorbefüllte Formular aus
+	F-13.
+
 	F-13 · Feature-Formular (features/F-13-feature-formular.md): Knopf „+ Feature" öffnet das
 	Anlegeformular. Ein über Rolle und Text erreichbarer Knopf „Bearbeiten" — Entscheidung des
 	Orchestrators, siehe features/STATUS.md, Abschnitt „Entscheidungen des Orchestrators", da
@@ -31,6 +37,8 @@
 	import { resetViewport } from '$lib/store/viewport';
 	import MapCanvas from '$lib/components/Map/MapCanvas.svelte';
 	import FeatureModal from '$lib/components/FeatureModal/FeatureModal.svelte';
+	import FeatureList from '$lib/components/FeatureList/FeatureList.svelte';
+	import type { FeatureId } from '$lib/model/types';
 
 	// Synchron beim Aufbau der Komponente, nicht in onMount: FR-72 verlangt, dass der
 	// gespeicherte Bestand vor dem ersten Rendern der Karte wiederhergestellt ist.
@@ -86,6 +94,28 @@
 		modalTrigger?.focus();
 		modalTrigger = null;
 	}
+
+	// F-14 · Verzeichnis: Auf-/Zugeklappt-Zustand des Panels (FR-50). Er liegt hier und nicht in
+	// FeatureList.svelte, weil der Auslöser im Kopfband sitzt.
+	let directoryOpen = $state(false);
+
+	function toggleDirectory(): void {
+		directoryOpen = !directoryOpen;
+	}
+
+	function closeDirectory(): void {
+		directoryOpen = false;
+	}
+
+	/** Aktion „Bearbeiten" eines Verzeichniseintrags (FR-55): öffnet dasselbe vorbefüllte
+	 * Formular wie der Kopfband-Knopf. Das Verzeichnis hat das Feature bereits selektiert; der
+	 * Fokus kehrt beim Schließen nicht auf den auslösenden Zeilenknopf zurück, weil das
+	 * Verzeichnis dabei einklappt und der Knopf nicht mehr existiert. */
+	function editFeatureFromDirectory(_id: FeatureId): void {
+		modalTrigger = null;
+		modalMode = 'edit';
+		modalOpen = true;
+	}
 </script>
 
 <svelte:window onkeydown={handleViewMenuKeydown} />
@@ -101,6 +131,14 @@
 			{#if $selectedId}
 				<button type="button" class="btn" onclick={openEditModal}>Bearbeiten</button>
 			{/if}
+			<button
+				type="button"
+				class="btn"
+				aria-pressed={directoryOpen}
+				onclick={toggleDirectory}
+			>
+				Verzeichnis
+			</button>
 			<div class="view-menu">
 				<button
 					type="button"
@@ -158,6 +196,11 @@
 
 	<main class="chart">
 		<MapCanvas map={$map} {domainMax} />
+		<FeatureList
+			open={directoryOpen}
+			onClose={closeDirectory}
+			onEditFeature={editFeatureFromDirectory}
+		/>
 	</main>
 
 	<footer class="foot"></footer>
