@@ -142,7 +142,7 @@ describe('groupByQuadrant', () => {
 	});
 
 	it('behält innerhalb einer Gruppe die Reihenfolge der Eingabe bei, statt neu zu sortieren', () => {
-		const first: Feature = { id: 'first', impact: 3, effort: 1 };
+		const first: Feature = { id: 'first', impact: 13, effort: 1 };
 		const second: Feature = { id: 'second', impact: 21, effort: 1 };
 		const groups = groupByQuadrant([second, first], 22);
 		const quickWins = groups.find((g) => g.quadrant === 'quickWins');
