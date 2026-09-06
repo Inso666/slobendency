@@ -353,17 +353,15 @@ test.describe('F-14 · Verzeichnis', () => {
 		await page.goto('/');
 		await openDirectory(page);
 
-		let dialogMessage = '';
-		page.once('dialog', (dialog) => {
-			dialogMessage = dialog.message();
-			void dialog.accept();
-		});
-
 		const zeile = rowOf(page, 'target');
 		await zeile.hover();
 		await zeile.getByRole('button', { name: 'Löschen' }).click();
 
-		await expect.poll(() => dialogMessage).toContain('3');
+		const rueckfrage = deleteConfirmDialog(page);
+		await expect(rueckfrage).toBeVisible();
+		await expect(rueckfrage).toContainText('3');
+		await rueckfrage.getByRole('button', { name: 'Löschen' }).click();
+
 		await expect(rowOf(page, 'target')).toHaveCount(0);
 		await expect(page.getByTestId('feature-node-target')).toHaveCount(0);
 		await expect(page.getByTestId('edge-target-x1-requires')).toHaveCount(0);
@@ -378,18 +376,15 @@ test.describe('F-14 · Verzeichnis', () => {
 		await page.goto('/');
 		await openDirectory(page);
 
-		let dialogShown = false;
-		page.once('dialog', (dialog) => {
-			dialogShown = true;
-			void dialog.accept();
-		});
-
 		const zeile = rowOf(page, 'einsam');
 		await zeile.hover();
 		await zeile.getByRole('button', { name: 'Löschen' }).click();
 
 		await expect(rowOf(page, 'einsam')).toHaveCount(0);
-		expect(dialogShown, 'ohne Beziehungen sollte keine Rückfrage erscheinen').toBe(false);
+		await expect(
+			deleteConfirmDialog(page),
+			'ohne Beziehungen sollte keine Rückfrage erscheinen'
+		).toHaveCount(0);
 	});
 
 	// FR-05: Bricht die Rückfrage ab, bleibt das Feature samt Beziehung erhalten.
@@ -405,11 +400,13 @@ test.describe('F-14 · Verzeichnis', () => {
 		await page.goto('/');
 		await openDirectory(page);
 
-		page.once('dialog', (dialog) => void dialog.dismiss());
-
 		const zeile = rowOf(page, 'target');
 		await zeile.hover();
 		await zeile.getByRole('button', { name: 'Löschen' }).click();
+
+		const rueckfrage = deleteConfirmDialog(page);
+		await expect(rueckfrage).toBeVisible();
+		await rueckfrage.getByRole('button', { name: 'Abbrechen' }).click();
 
 		await expect(rowOf(page, 'target')).toBeVisible();
 		await expect(page.getByTestId('feature-node-target')).toBeVisible();
