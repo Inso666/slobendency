@@ -21,7 +21,7 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-13 | Feature-Formular | fertig | — | gemergt 06.09. 00:20 |
 | F-14 | Verzeichnis | fertig | — | gemergt 06.09. 21:18 |
 | F-15 | Detail-Kartusche | fertig | — | gemergt 06.09. 21:38 |
-| F-16 | Kontextmenü und Verbindungsvorgang | in Tests | feature/F-16-verbindungsvorgang | Test-Agent schreibt, inkl. nachzuholendem Escape-Test (FR-13) |
+| F-16 | Kontextmenü und Verbindungsvorgang | in Arbeit | feature/F-16-verbindungsvorgang | 13 Unit- und 24 E2E-Tests rot committet (992513e); ein Widerspruch im Feature-Dokument selbst entschieden (unten) |
 | F-17 | Beziehungen bearbeiten und löschen | offen | — | — |
 | F-18 | Import-Dialog | offen | — | — |
 | F-19 | Export-Dialog | offen | — | — |
@@ -155,6 +155,19 @@ lange genug dauerten. Festgelegt: In diesem einen Test wird die Zusicherung übe
 LocalStorage-Zustand auf `expect.poll` umgestellt (wartet bis zu einer Zeitspanne größer als
 400 ms auf das Verschwinden von `rollen` bzw. auf `relations` mit Länge 0), statt einmalig zu
 lesen. Prüfabsicht und Erwartungswerte bleiben unverändert. Der QA-Agent für F-15 setzt das um.
+
+**Zyklus-Warnung AK-08 gehört zu F-23, nicht zu F-16 (06.09.).** `features/F-16-verbindungsvorgang.md`
+widerspricht sich selbst: sein eigener Akzeptanzkriterien-Abschnitt verlangt „A → B → A lässt
+sich anlegen und erzeugt eine sichtbare Zyklus-Warnung (AK-08)", sein eigener Abschnitt „Nicht
+Teil dieses Features" schließt aber ausdrücklich die „Anzeige der Zyklus-Warnung (F-23)" aus.
+`features/F-23-statuszeile.md` beansprucht AK-08 vollständig für sich, mit den konkreten Details
+(Zyklen-Zeile in der Fußleiste, Kanten in Warnfarbe, anklickbar zur Selektion). Maßgeblich ist
+der Ausschluss: PRD INT-05 trennt bereits zwei Hälften — die Beziehung „wird angelegt" (das ist
+F-16s Anteil) und der „Warnhinweis erscheint (F-23)" (PRD-Wortlaut, Zeile zu INT-05). F-16 prüft
+und baut deshalb nur, dass eine zyklusschließende Beziehung anstandslos angelegt wird; die
+sichtbare Warnung, ihre Farbe und ihre Anklickbarkeit bleiben vollständig F-23 vorbehalten. Die
+vorgelegten F-16-Tests sind bereits entsprechend eng geschnitten (Anlegen ja, Warnung nein) —
+keine Teständerung nötig, nur diese Klarstellung für Feature- und QA-Agent.
 
 ## Sessionprotokoll
 
