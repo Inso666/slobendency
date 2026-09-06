@@ -19,8 +19,8 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-11 | Selektion, Hervorhebung, Dimming | fertig | — | gemergt 05.09. 18:20 |
 | F-12 | Zoom und Pan | fertig | — | gemergt 05.09. 20:05 |
 | F-13 | Feature-Formular | fertig | — | gemergt 06.09. 00:20 |
-| F-14 | Verzeichnis | in Arbeit | feature/F-14-verzeichnis | 14 Unit- und 21 E2E-Tests rot committet |
-| F-15 | Detail-Kartusche | in Tests | feature/F-15-detail-kartusche | Auflage: den Knopf Bearbeiten aus F-13 in die Kartusche übernehmen, nicht danebenstellen |
+| F-14 | Verzeichnis | fertig | — | gemergt 06.09. 21:18 |
+| F-15 | Detail-Kartusche | in QA | feature/F-15-detail-kartusche | Umsetzung fertig (f24450f), 117/120 E2E grün; drei offene Testbefunde unten (Kartuschen-/Legenden-Kollision, Debounce-Race) für den QA-Agenten |
 | F-16 | Kontextmenü und Verbindungsvorgang | offen | — | Nachzuholen: Test für Escape bricht Verbindungsvorgang ab (FR-13); in F-11 mangels Oberfläche nicht fahrbar |
 | F-17 | Beziehungen bearbeiten und löschen | offen | — | — |
 | F-18 | Import-Dialog | offen | — | — |
@@ -104,6 +104,58 @@ führt. F-13 hat mit dem Formular als `<dialog>` in der Seite den Präzedenzfall
 diese Wahl ein Muster fortschreibt, statt ein zweites daneben zu stellen. Die zugehörige
 Teständerung an `e2e/F-14-verzeichnis.spec.ts` ist freigegeben (Commit 00fa887).
 
+**Rückfragedialog in F-15 vereinheitlicht mit FR-05-Entscheidung (06.09.).** Der Test-Agent für
+F-15 hat die Löschrückfrage der Kartusche unabhängig von der F-14-Entscheidung als
+`role="dialog"` ohne festen Namen entworfen (in den Quellen für F-15 selbst nicht widersprüchlich,
+da F-15 keine eigene Festlegung dazu trifft). Beide Rückfragen bedienen dieselbe Fachregel FR-05
+und sollten aus derselben Komponente kommen, sonst stünden zwei Bestätigungsmuster nebeneinander
+— genau das, was die FR-05-Entscheidung vom 06.09. vermeiden wollte. Festgelegt: F-15 übernimmt
+`role="alertdialog"` mit dem Namen *Feature löschen*, wie in der F-14-Entscheidung. Umgesetzt in
+`e2e/F-15-detail-kartusche.spec.ts` (Commit 5fba48c) und in `DetailCartouche.svelte`.
+
+**Lotungsbeschriftung „Impact"/„Effort" in der Kartusche (06.09.).** Der Test-Agent für F-15 hat
+die Spaltenbeschriftungen der Lotung wörtlich als *Impact* und *Effort* getestet, obwohl die
+Sprachtabelle in `features/README.md` der Oberfläche *Nutzen*/*Aufwand* zuordnet (so auch im
+Formular aus F-13 und im Sortierfeld aus F-14). Maßgeblich bleibt hier die engere, speziellere
+Quelle: PRD FR-40 nennt in der Aufzählung der Tooltip-Inhalte wörtlich „Impact, Effort" neben den
+deutschen Aktionsnamen „Bearbeiten, Löschen" — die PRD wählt an dieser Stelle also bewusst die
+englischen Feldnamen, nicht nur ihre Bedeutung. `design/03-seekarte.html` bildet exakt das ab:
+die Lotung der Kartusche zeigt `<u>Impact</u>` und `<u>Effort</u>`. Die Sprachtabelle regelt die
+Zuordnung von Oberflächenbegriff zu Codebezeichner (*Nutzen* → `impact`); sie schließt nicht aus,
+dass eine einzelne, durch PRD und Entwurf übereinstimmend belegte Beschriftung die englischen
+Feldnamen direkt zeigt. Die Anwendung führt damit an dieser einen Stelle beide Bezeichnungen:
+deutsch im Formular und im Sortierfeld, englisch in der Kartusche — dort, wo PRD und Entwurf
+übereinstimmend das Gegenteil der allgemeinen Regel verlangen.
+
+**F-11-Testkonflikt durch die Kartuschenposition (06.09., korrigiert).** `e2e/F-11-selektion.spec.ts`
+klickt in `clickBlankArea` auf eine freie Fläche der Plotfläche. Zunächst war die untere rechte
+Ecke festgelegt — das übersah, dass dort laut Entwurf die Zeichenerklärung aus F-10 liegt
+(`.legend`, `right:26px; bottom:26px`, sichtbar ab 1080 px, der Standardbreite der
+Testumgebung). Die obere rechte Ecke scheidet weiterhin aus (Detail-Kartusche aus F-15). Beide
+rechten Ecken sind damit belegt, sobald ein Feature selektiert ist — und genau in diesem Moment
+klickt der Test. Festgelegt: `clickBlankArea` zielt stattdessen auf die obere linke Ecke. Dort
+liegt weder die Kartusche noch die Zeichenerklärung, und die Testdaten aller betroffenen
+Spezifikationen (niedriger Impact und Effort) plotten ohnehin unten links (FR-20/FR-21) — die
+obere linke Ecke bleibt für jede bisherige Testkarte frei. Das gilt gleichermaßen für den
+gleichnamigen Helfer in `e2e/F-15-detail-kartusche.spec.ts`. Der QA-Agent für F-15 setzt beide
+Vorkommen auf die obere linke Ecke um (mechanische Koordinatenänderung, keine neue
+Prüfabsicht) und prüft danach die volle Suite erneut. Sollte nach der Zusammenführung mit dem
+Verzeichnis-Panel aus F-14 (linker Rand, standardmäßig eingeklappt) auch diese Ecke kollidieren,
+ist das ein neuer, hier festzuhaltender Befund — im eingeklappten Zustand sollte das Panel dort
+aber nichts abfangen.
+
+**Debounce-Race im Löschtest von F-15 (06.09.).** `e2e/F-15-detail-kartusche.spec.ts`, Test
+„löscht das Feature samt seiner Kanten…", liest über `readStoredMap` unmittelbar nach den
+DOM-Zusicherungen den LocalStorage-Zustand, ohne auf die in `src/lib/store/persistence.ts`
+festgelegte Schreibverzögerung von 400 ms (`DEBOUNCE_MS`, F-04) zu warten. DOM und Store
+aktualisieren sich sofort korrekt; nur die Persistenz hinkt hinterher, wodurch der Test
+nichtdeterministisch rot wird. Dasselbe Muster (`readStoredMap` direkt nach einer Aktion) steht
+bereits in F-11 und F-13 und war dort unauffällig, weil vorangehende Zusicherungen dort zufällig
+lange genug dauerten. Festgelegt: In diesem einen Test wird die Zusicherung über den
+LocalStorage-Zustand auf `expect.poll` umgestellt (wartet bis zu einer Zeitspanne größer als
+400 ms auf das Verschwinden von `rollen` bzw. auf `relations` mit Länge 0), statt einmalig zu
+lesen. Prüfabsicht und Erwartungswerte bleiben unverändert. Der QA-Agent für F-15 setzt das um.
+
 ## Sessionprotokoll
 
 Je Session eine Zeile: Datum, geweckt oder manuell gestartet, was erledigt wurde, womit die
@@ -113,3 +165,4 @@ nächste Session anfängt.
 |---|---|---|---|
 | 04.–05.09. | manuell | Ausgangslage committet, Weckzyklus gestartet, F-01 durch Tests, Umsetzung, QA und Merge gebracht (2 QA-Befunde behoben: fehlende CSP, Kopfband-Anordnung unter 768 px). | F-02 durch Tests, Umsetzung und QA bringen. |
 | 05.09. | manuell | F-02, F-03 und F-04 fertiggestellt und gemergt. Eine Teständerung in F-04 freigegeben, ein Quellenwiderspruch zum Kennung-Zeichensatz entschieden. | F-05 durch Tests, Umsetzung und QA bringen; dabei die Kennungsprüfung aus F-02 verengen. |
+| 06.09. (Fortsetzung, geweckt 20:47) | geweckt | F-14 durch Umsetzung (ein Fixture-Fehler im Test korrigiert), QA und Merge nach main gebracht. F-15-Umsetzung fertiggestellt; drei Testbefunde (Dialogrolle, Kartuschen-/Legenden-Kollision bei clickBlankArea, Debounce-Race) entschieden und für den QA-Agenten festgehalten. | F-15 durch QA (inkl. der drei festgehaltenen Behebungen) und Merge bringen; danach F-16. |
