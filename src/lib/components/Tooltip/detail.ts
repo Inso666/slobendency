@@ -14,6 +14,7 @@
 // Signatur ist vom Test-Agenten vorgegeben. Rümpfe sind Aufgabe des Feature-Agenten.
 
 import type { FeatureId, FeatureMap, Quadrant, RelationType } from '../../model/types';
+import { relationsOf } from '../../model/validation';
 
 /** Eine Zeile in "Geht aus von hier" bzw. "Führt hierher". */
 export interface Bearing {
@@ -38,13 +39,41 @@ export interface Bearings {
  * ergeben zwei leere Listen (F-15: "hat es gar keine, steht dort *Keine Beziehungen*").
  */
 export function bearingsOf(map: FeatureMap, id: FeatureId): Bearings {
-	throw new Error('not implemented');
+	const { outgoing, incoming } = relationsOf(map, id);
+
+	// PRD 3.1: „label — Anzeigename. Fehlt er, wird id angezeigt."
+	function nameOf(counterpartId: FeatureId): string {
+		const counterpart = map.features.find((feature) => feature.id === counterpartId);
+		return counterpart?.label ?? counterpartId;
+	}
+
+	return {
+		outgoing: outgoing.map((relation) => ({
+			counterpartId: relation.to,
+			name: nameOf(relation.to),
+			type: relation.type,
+			label: relation.label
+		})),
+		incoming: incoming.map((relation) => ({
+			counterpartId: relation.from,
+			name: nameOf(relation.from),
+			type: relation.type,
+			label: relation.label
+		}))
+	};
 }
+
+const QUADRANT_LABELS: Record<Quadrant, string> = {
+	quickWins: 'Quick Wins',
+	grosseVorhaben: 'Große Vorhaben',
+	nebenbei: 'Nebenbei',
+	vermeiden: 'Vermeiden'
+};
 
 /**
  * Benennt ein Revier in der Sprache der Oberfläche: *Quick Wins*, *Große Vorhaben*,
  * *Nebenbei*, *Vermeiden* (F-15, Abschnitt "Fachregeln").
  */
 export function quadrantLabel(quadrant: Quadrant): string {
-	throw new Error('not implemented');
+	return QUADRANT_LABELS[quadrant];
 }
