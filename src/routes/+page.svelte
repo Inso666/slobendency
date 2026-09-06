@@ -19,25 +19,33 @@
 	F-13.
 
 	F-13 · Feature-Formular (features/F-13-feature-formular.md): Knopf „+ Feature" öffnet das
-	Anlegeformular. Ein über Rolle und Text erreichbarer Knopf „Bearbeiten" — Entscheidung des
-	Orchestrators, siehe features/STATUS.md, Abschnitt „Entscheidungen des Orchestrators", da
-	F-13 nicht von F-15/F-16 abhängt, aus denen die Quellen sonst einen Auslöser für den
-	Bearbeitungsmodus (FR-04) kennen würden — öffnet dasselbe Formular vorbefüllt, solange ein
-	Feature selektiert ist (F-11 `selectedId`). Beide Knöpfe merken sich das auslösende Element,
-	damit der Fokus beim Schließen dorthin zurückkehrt (F-13, Abschnitt „Darstellung"); das ist
-	Aufgabe des Aufrufers, nicht von FeatureModal.svelte selbst.
+	Anlegeformular.
+
+	F-15 · Detail-Kartusche (features/F-15-detail-kartusche.md, Abschnitt „Verhalten"): Der
+	Knopf „Bearbeiten", solange ein Feature selektiert ist, saß ursprünglich im Kopfband
+	(Entscheidung des Orchestrators zu F-13, da F-13 nicht von F-15/F-16 abhängt, aus denen die
+	Quellen sonst einen Auslöser für den Bearbeitungsmodus, FR-04, kennen würden) — F-15 nennt
+	ihn ausdrücklich als eine der Aktionen der Kartusche und übernimmt ihn dorthin, statt ihn ein
+	zweites Mal danebenzustellen (features/STATUS.md, Auflage zu F-15). `openEditModal` merkt
+	sich dazu `document.activeElement`, weil DetailCartouche.svelte das auslösende Element nicht
+	selbst als Ereignis durchreicht (seine Signatur `onEdit: () => void` ist vom Test-Agenten
+	vorgegeben) — im Augenblick des Klicks ist das der Knopf „Bearbeiten" der Kartusche selbst,
+	damit der Fokus beim Schließen des Formulars dorthin zurückkehrt (F-13, Abschnitt
+	„Darstellung"); das Nachhalten des auslösenden Elements bleibt Aufgabe des Aufrufers, nicht
+	von FeatureModal.svelte.
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { initTheme, theme, type Theme } from '$lib/store/theme';
 	import { initPersistence } from '$lib/store/persistence';
 	import { map, selectedFeature } from '$lib/store/mapStore';
-	import { highlightMode, selectedId } from '$lib/store/selection';
+	import { highlightMode } from '$lib/store/selection';
 	import { domainMaxOf } from '$lib/layout/scales';
 	import { resetViewport } from '$lib/store/viewport';
 	import MapCanvas from '$lib/components/Map/MapCanvas.svelte';
 	import FeatureModal from '$lib/components/FeatureModal/FeatureModal.svelte';
 	import FeatureList from '$lib/components/FeatureList/FeatureList.svelte';
+	import DetailCartouche from '$lib/components/Tooltip/DetailCartouche.svelte';
 	import type { FeatureId } from '$lib/model/types';
 
 	// Synchron beim Aufbau der Komponente, nicht in onMount: FR-72 verlangt, dass der
@@ -83,8 +91,12 @@
 		modalOpen = true;
 	}
 
-	function openEditModal(event: MouseEvent): void {
-		modalTrigger = event.currentTarget as HTMLElement;
+	/** Ausgelöst über DetailCartouche.svelte, dessen `onEdit: () => void` (vom Test-Agenten
+	 * vorgegebene Signatur) das auslösende Element nicht mitliefert — im Augenblick des Klicks
+	 * ist das aber bereits deren Knopf „Bearbeiten" (document.activeElement), siehe Kommentar am
+	 * Dateianfang. */
+	function openEditModal(): void {
+		modalTrigger = document.activeElement as HTMLElement | null;
 		modalMode = 'edit';
 		modalOpen = true;
 	}
@@ -128,9 +140,6 @@
 		</div>
 		<div class="acts">
 			<button type="button" class="btn pri" onclick={openCreateModal}>+ Feature</button>
-			{#if $selectedId}
-				<button type="button" class="btn" onclick={openEditModal}>Bearbeiten</button>
-			{/if}
 			<button
 				type="button"
 				class="btn"
@@ -196,6 +205,9 @@
 
 	<main class="chart">
 		<MapCanvas map={$map} {domainMax} />
+		{#if $selectedFeature}
+			<DetailCartouche map={$map} feature={$selectedFeature} {domainMax} onEdit={openEditModal} />
+		{/if}
 		<FeatureList
 			open={directoryOpen}
 			onClose={closeDirectory}

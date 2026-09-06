@@ -98,9 +98,12 @@ async function clickBlankArea(page: Page): Promise<void> {
 	const map = page.getByRole('img', { name: /Streudiagramm/ });
 	const box = await map.boundingBox();
 	expect(box, 'Kartenfläche sollte eine sichtbare Bounding Box haben').not.toBeNull();
-	// Oben rechts in der Plotfläche: alle Testkarten dieser Datei verwenden niedrige
-	// Impact-/Effort-Werte, die unten links landen (FR-20/FR-21) — diese Ecke bleibt frei.
-	await map.click({ position: { x: box!.width * 0.95, y: box!.height * 0.05 } });
+	// Obere linke Ecke der Plotfläche (features/STATUS.md, Entscheidung vom 06.09.
+	// "F-11-Testkonflikt durch die Kartuschenposition, korrigiert"): Weder die Detail-Kartusche
+	// aus F-15 (oben rechts) noch die Zeichenerklärung aus F-10 (unten rechts, `.legend`) liegen
+	// hier. Alle Testkarten dieser Datei verwenden niedrige Impact-/Effort-Werte, die ohnehin
+	// unten links landen (FR-20/FR-21) — die obere linke Ecke bleibt frei.
+	await map.click({ position: { x: box!.width * 0.05, y: box!.height * 0.05 } });
 }
 
 const KETTE: SeedFeature[] = [
