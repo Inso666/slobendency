@@ -20,7 +20,7 @@
 // Setzen von connectSource/connectTarget ist dagegen ein reiner Store-Zugriff ohne eigenen
 // Rumpf, wie schon bei selectedId (kein Test-Agenten-Rumpf, kein Nachweis nötig).
 
-import { writable, type Writable } from 'svelte/store';
+import { get, writable, type Writable } from 'svelte/store';
 import type { FeatureId } from '../model/types';
 
 /** Kennung des aktuell selektierten Features, oder null ohne Selektion. */
@@ -54,7 +54,8 @@ export function clearSelection(): void {
  * lässt selectedId und highlightMode unangetastet. Ohne laufenden Vorgang wirkungslos.
  */
 export function cancelConnection(): void {
-	throw new Error('not implemented');
+	connectSource.set(null);
+	connectTarget.set(null);
 }
 
 /**
@@ -67,5 +68,9 @@ export function cancelConnection(): void {
  * automatisch den zweiten Fall.
  */
 export function handleEscape(): void {
-	throw new Error('not implemented');
+	if (get(connectSource) !== null) {
+		cancelConnection();
+	} else {
+		clearSelection();
+	}
 }

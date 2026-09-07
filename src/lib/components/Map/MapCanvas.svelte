@@ -29,13 +29,34 @@
 	Touch nach (UI-14). Bildschirmkoordinaten (Zeiger, Finger) werden über die CTM der äußeren
 	`<svg>` — also unabhängig vom inneren Zoom/Pan-`transform` — in den unskalierten
 	Koordinatenraum von VIEWBOX/PLOT umgerechnet, in dem viewport.ts rechnet.
+
+	F-16 · Kontextmenü und Verbindungsvorgang (features/F-16-verbindungsvorgang.md, Abschnitt
+	„Ablauf" Schritt 1; Absatz nach „Fachregeln"): Rechtsklick auf die Karte — ein Feature oder
+	freie Fläche — meldet Bildschirmposition und Ziel über `onContextMenu` an den Aufrufer
+	(routes/+page.svelte), der ContextMenu.svelte öffnet. Das native Browser-Kontextmenü wird
+	über einen *capturing* `contextmenu`-Listener auf `window` unterdrückt, an `onMount`
+	angehängt statt am SVG-Element selbst: Ein Listener am Element sitzt im Ereignispfad erst in
+	der Ziel-/Bubbling-Phase, also nach jedem capturing-Listener, den ein Test (oder anderer
+	Seitencode) seinerseits auf `window` registriert, um `event.defaultPrevented` zu prüfen —
+	`preventDefault()` käme für einen solchen Listener zu spät. Ein früh (beim Einhängen dieser
+	Komponente) registrierter capturing-Listener auf `window` selbst läuft dagegen vor jedem
+	später hinzukommenden capturing-Listener auf demselben Ziel (Ereignisse am selben Knoten
+	feuern in Registrierungsreihenfolge) und erreicht damit zuverlässig auch capturing-Prüfungen
+	von außen (e2e/F-16-verbindungsvorgang.spec.ts, `rightClickAt()`). Welches Feature getroffen
+	wurde, ermittelt `data-feature-id` (FeatureNodes.svelte) über `closest()` am Ereignisziel;
+	ohne Treffer gilt der Rechtsklick der freien Fläche. ESC läuft ab sofort über
+	`handleEscape()` (src/lib/store/selection.ts) statt über `clearSelection()`: F-16, Abschnitt
+	„Abbruch" — „ESC bricht zuerst den Verbindungsvorgang ab, erst ein zweites ESC hebt die
+	Selektion auf" —, die von `clearSelection()` allein nicht zu unterscheidenden zwei Stufen
+	liegen bereits in `handleEscape()` selbst (Leitplanke 3: Fachregel steht im Aggregat/Store,
+	nicht hier).
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { VIEWBOX } from '../../layout/scales';
 	import { placeFeatures } from '../../layout/jitter';
-	import type { FeatureMap } from '../../model/types';
-	import { clearSelection } from '../../store/selection';
+	import type { FeatureId, FeatureMap } from '../../model/types';
+	import { clearSelection, handleEscape } from '../../store/selection';
 	import { panBy, viewport, zoomAt } from '../../store/viewport';
 	import Regions from './Regions.svelte';
 	import Grid from './Grid.svelte';
@@ -43,8 +64,23 @@
 	import Edges from './Edges.svelte';
 	import FeatureNodes from './FeatureNodes.svelte';
 	import Legend from './Legend.svelte';
+	import type { ContextMenuTarget } from '../ContextMenu/ContextMenu.svelte';
 
-	let { map, domainMax }: { map: FeatureMap; domainMax: number } = $props();
+	let {
+		map,
+		domainMax,
+		onContextMenu
+	}: {
+		map: FeatureMap;
+		domainMax: number;
+		/** Rechtsklick oder Long-Press auf der Karte (F-16, Ablauf Schritt 1) — Bildschirmposition
+		 * und Ziel (ein bestimmtes Feature oder freie Fläche). */
+		onContextMenu: (x: number, y: number, target: ContextMenuTarget) => void;
+	} = $props();
+
+	function handleFeatureContextMenu(x: number, y: number, id: FeatureId): void {
+		onContextMenu(x, y, { kind: 'feature', id });
+	}
 
 	let placements = $derived(placeFeatures(map, domainMax));
 
@@ -145,19 +181,40 @@
 		}
 	}
 
+	/** Rechtsklick auf die Karte (F-16, Ablauf Schritt 1; Absatz nach „Fachregeln") — capturing
+	 * auf `window`, siehe Modulkommentar zur Begründung. Nur Rechtsklicks innerhalb dieses
+	 * SVGs werden behandelt; anderswo (Kopfband, Verzeichnis, Kartuschen) bleibt das native
+	 * Kontextmenü unverändert, weil F-16 es nur „über der Karte" ersetzt. */
+	function handleContextMenu(event: MouseEvent): void {
+		if (!svgEl || !(event.target instanceof Node) || !svgEl.contains(event.target)) return;
+		event.preventDefault();
+		const featureEl = (event.target as Element).closest?.('[data-feature-id]');
+		if (featureEl) {
+			onContextMenu(event.clientX, event.clientY, {
+				kind: 'feature',
+				id: featureEl.getAttribute('data-feature-id') as FeatureId
+			});
+		} else {
+			onContextMenu(event.clientX, event.clientY, { kind: 'blank' });
+		}
+	}
+
 	onMount(() => {
 		function handleKeydown(event: KeyboardEvent): void {
-			if (event.key === 'Escape') clearSelection();
+			if (event.key === 'Escape') handleEscape();
 		}
 		window.addEventListener('keydown', handleKeydown);
 		// Am window, nicht am SVG: ein Zug endet auch, wenn der Zeiger die Kartenfläche
 		// während des Ziehens verlässt (F-12, Zeile „Pan").
 		window.addEventListener('mousemove', handleMouseMove);
 		window.addEventListener('mouseup', endDrag);
+		// capture: true — siehe Modulkommentar (F-16, Kontextmenü-Abschnitt).
+		window.addEventListener('contextmenu', handleContextMenu, true);
 		return () => {
 			window.removeEventListener('keydown', handleKeydown);
 			window.removeEventListener('mousemove', handleMouseMove);
 			window.removeEventListener('mouseup', endDrag);
+			window.removeEventListener('contextmenu', handleContextMenu, true);
 		};
 	});
 </script>
@@ -216,7 +273,7 @@
 		<Grid {domainMax} />
 		<Axes {domainMax} />
 		<Edges {map} {placements} />
-		<FeatureNodes {map} {domainMax} scale={$viewport.scale} />
+		<FeatureNodes {map} {domainMax} scale={$viewport.scale} onLongPress={handleFeatureContextMenu} />
 	</g>
 </svg>
 
