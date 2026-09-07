@@ -636,6 +636,11 @@ test.describe('F-16 · Kontextmenü und Verbindungsvorgang', () => {
 		await connectViaContextMenu(page, 'a', 'c', 'hängt zusammen', 'gemeinsame Nutzer');
 
 		await expect(page.getByTestId('edge-a-c-relates')).toBeVisible();
+		// Kantenbeschriftungen sind ohne Selektion/Hover nicht sichtbar (FR-45) — deshalb vor der
+		// Textprüfung die neue Kante überfahren, wie in e2e/F-10-kanten.spec.ts und
+		// e2e/F-11-selektion.spec.ts etabliert (force: true aus demselben, dort begründeten Grund:
+		// die dünne Linie trifft an ihrem Bounding-Box-Mittelpunkt sonst leicht das Revier).
+		await page.getByTestId('edge-a-c-relates').hover({ force: true });
 		await expect(page.getByTestId('edge-label-a-c-relates')).toContainText('gemeinsame Nutzer');
 	});
 
