@@ -21,7 +21,7 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-13 | Feature-Formular | fertig | — | gemergt 06.09. 00:20 |
 | F-14 | Verzeichnis | fertig | — | gemergt 06.09. 21:18 |
 | F-15 | Detail-Kartusche | fertig | — | gemergt 06.09. 21:38 |
-| F-16 | Kontextmenü und Verbindungsvorgang | in QA | feature/F-16-verbindungsvorgang | Umsetzung fertig (423126c), 164/165 E2E grün; ein Testbefund unten (fehlender Hover vor Labelprüfung, FR-45) für den QA-Agenten |
+| F-16 | Kontextmenü und Verbindungsvorgang | fertig | — | gemergt 07.09. 02:26 |
 | F-17 | Beziehungen bearbeiten und löschen | offen | — | — |
 | F-18 | Import-Dialog | offen | — | — |
 | F-19 | Export-Dialog | offen | — | — |
@@ -191,3 +191,4 @@ nächste Session anfängt.
 | 04.–05.09. | manuell | Ausgangslage committet, Weckzyklus gestartet, F-01 durch Tests, Umsetzung, QA und Merge gebracht (2 QA-Befunde behoben: fehlende CSP, Kopfband-Anordnung unter 768 px). | F-02 durch Tests, Umsetzung und QA bringen. |
 | 05.09. | manuell | F-02, F-03 und F-04 fertiggestellt und gemergt. Eine Teständerung in F-04 freigegeben, ein Quellenwiderspruch zum Kennung-Zeichensatz entschieden. | F-05 durch Tests, Umsetzung und QA bringen; dabei die Kennungsprüfung aus F-02 verengen. |
 | 06.09. (Fortsetzung, geweckt 20:47) | geweckt | F-14 und F-15 vollständig durch Umsetzung, QA und Merge nach main gebracht (F-15-QA behob zusätzlich eine Typografie-Abweichung in der Kartusche). Rebase-Konflikt zwischen beiden Features in src/routes/+page.svelte aufgelöst (Verzeichnis-Panel und Detail-Kartusche bestehen nebeneinander). Gesamtsuite auf main: 427/427 Unit-, 141/141 E2E-Tests grün. | F-16 (Kontextmenü und Verbindungsvorgang) durch Tests, Umsetzung und QA bringen; dabei den nachzuholenden Test für Escape (FR-13) aus der F-16-Anmerkung berücksichtigen. |
+| 07.09. (Fortsetzung, geweckt 01:47) | geweckt | F-16 fertiggestellt (ein Ratenlimit-Abbruch mittendrin, von frischem Feature-Agent fortgesetzt) und nach QA (ein Testbefund behoben: fehlender Hover vor Labelprüfung, FR-45) nach main gemergt. Ein interner Widerspruch im F-16-Dokument selbst entschieden (Zyklus-Warnung AK-08 gehört zu F-23). Gesamtsuite auf main: 436/436 Unit-, 165/165 E2E-Tests grün. | F-17 (Beziehungen bearbeiten und löschen) durch Tests, Umsetzung und QA bringen. |
