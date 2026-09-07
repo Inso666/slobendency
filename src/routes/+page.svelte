@@ -33,19 +33,36 @@
 	damit der Fokus beim Schließen des Formulars dorthin zurückkehrt (F-13, Abschnitt
 	„Darstellung"); das Nachhalten des auslösenden Elements bleibt Aufgabe des Aufrufers, nicht
 	von FeatureModal.svelte.
+
+	F-16 · Kontextmenü und Verbindungsvorgang (features/F-16-verbindungsvorgang.md): MapCanvas.svelte
+	meldet Rechtsklick/Long-Press über `onContextMenu` hierher (Bildschirmposition, Ziel); diese
+	Seite hält den Menüzustand und rendert ContextMenu.svelte, weil dessen Aktionen „Bearbeiten",
+	„Feature anlegen" und „Ganze Karte zeigen" dieselben hier bereits vorhandenen Kanäle
+	(`editFeatureFromDirectory`, ein neuer `openCreateModalFromContextMenu`, `resetViewport`)
+	auslösen wie die entsprechenden Knöpfe des Kopfbands/Verzeichnisses — kein zweiter Mechanismus
+	für dieselbe Aktion (features/README.md, Leitplanke 3). RelationDialog.svelte öffnet sich alleine
+	darüber, dass Start *und* Ziel gesetzt sind (`connectSource`/`connectTarget`,
+	src/lib/store/selection.ts, F-16 Ablauf Schritt 3) — dieselbe Bedingung, unabhängig davon, ob der
+	Start über das Kontextmenü, die Detail-Kartusche (F-15) oder das Verzeichnis (F-14, FR-15) gesetzt
+	wurde. Das Hinweisband „Ziel wählen — ESC bricht ab" (F-16, Ablauf Schritt 2, FR-14) ist an
+	`connectSource` gebunden und läuft über denselben `cancelConnection()` wie sein Knopf „Abbrechen".
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { initTheme, theme, type Theme } from '$lib/store/theme';
 	import { initPersistence } from '$lib/store/persistence';
 	import { map, selectedFeature } from '$lib/store/mapStore';
-	import { highlightMode } from '$lib/store/selection';
+	import { cancelConnection, connectSource, connectTarget, highlightMode } from '$lib/store/selection';
 	import { domainMaxOf } from '$lib/layout/scales';
 	import { resetViewport } from '$lib/store/viewport';
 	import MapCanvas from '$lib/components/Map/MapCanvas.svelte';
 	import FeatureModal from '$lib/components/FeatureModal/FeatureModal.svelte';
 	import FeatureList from '$lib/components/FeatureList/FeatureList.svelte';
 	import DetailCartouche from '$lib/components/Tooltip/DetailCartouche.svelte';
+	import ContextMenu, {
+		type ContextMenuTarget
+	} from '$lib/components/ContextMenu/ContextMenu.svelte';
+	import RelationDialog from '$lib/components/RelationDialog/RelationDialog.svelte';
 	import type { FeatureId } from '$lib/model/types';
 
 	// Synchron beim Aufbau der Komponente, nicht in onMount: FR-72 verlangt, dass der
@@ -122,10 +139,36 @@
 	/** Aktion „Bearbeiten" eines Verzeichniseintrags (FR-55): öffnet dasselbe vorbefüllte
 	 * Formular wie der Kopfband-Knopf. Das Verzeichnis hat das Feature bereits selektiert; der
 	 * Fokus kehrt beim Schließen nicht auf den auslösenden Zeilenknopf zurück, weil das
-	 * Verzeichnis dabei einklappt und der Knopf nicht mehr existiert. */
+	 * Verzeichnis dabei einklappt und der Knopf nicht mehr existiert. Wird ebenso von
+	 * ContextMenu.svelte (F-16, „Bearbeiten") aufgerufen — derselbe Kanal, kein zweiter
+	 * (features/README.md, Leitplanke 3). */
 	function editFeatureFromDirectory(_id: FeatureId): void {
 		modalTrigger = null;
 		modalMode = 'edit';
+		modalOpen = true;
+	}
+
+	// F-16 · Kontextmenü und Verbindungsvorgang (features/F-16-verbindungsvorgang.md, Abschnitt
+	// „Ablauf" Schritt 1). Zustand liegt hier, nicht in MapCanvas.svelte, weil die Aktionen für
+	// freie Fläche („Feature anlegen", „Ganze Karte zeigen") bereits vorhandene Kanäle dieser
+	// Seite auslösen (Kommentar am Dateianfang).
+	let contextMenu = $state<{ x: number; y: number; target: ContextMenuTarget } | null>(null);
+
+	function openContextMenu(x: number, y: number, target: ContextMenuTarget): void {
+		contextMenu = { x, y, target };
+	}
+
+	function closeContextMenu(): void {
+		contextMenu = null;
+	}
+
+	/** „Feature anlegen" auf freier Fläche (F-16, Absatz nach „Fachregeln") — dasselbe
+	 * Anlegeformular wie der Kopfband-Knopf „+ Feature", ohne dessen Rückkehr-Fokus (das
+	 * auslösende Menüelement existiert beim Schließen längst nicht mehr, wie bei
+	 * editFeatureFromDirectory()). */
+	function openCreateModalFromContextMenu(): void {
+		modalTrigger = null;
+		modalMode = 'create';
 		modalOpen = true;
 	}
 </script>
@@ -204,7 +247,7 @@
 	</header>
 
 	<main class="chart">
-		<MapCanvas map={$map} {domainMax} />
+		<MapCanvas map={$map} {domainMax} onContextMenu={openContextMenu} />
 		{#if $selectedFeature}
 			<DetailCartouche map={$map} feature={$selectedFeature} {domainMax} onEdit={openEditModal} />
 		{/if}
@@ -213,6 +256,14 @@
 			onClose={closeDirectory}
 			onEditFeature={editFeatureFromDirectory}
 		/>
+
+		{#if $connectSource}
+			<!-- F-16, Ablauf Schritt 2, FR-14: Hinweisband, solange ein Verbindungsvorgang läuft. -->
+			<div class="connect-banner cartouche" data-testid="connect-banner">
+				<span>Ziel wählen — ESC bricht ab</span>
+				<button type="button" onclick={() => cancelConnection()}>Abbrechen</button>
+			</div>
+		{/if}
 	</main>
 
 	<footer class="foot"></footer>
@@ -225,4 +276,59 @@
 			onClose={closeModal}
 		/>
 	{/if}
+
+	{#if contextMenu}
+		<ContextMenu
+			x={contextMenu.x}
+			y={contextMenu.y}
+			target={contextMenu.target}
+			onClose={closeContextMenu}
+			onEdit={editFeatureFromDirectory}
+			onCreateFeature={openCreateModalFromContextMenu}
+			onShowWholeMap={() => resetViewport()}
+		/>
+	{/if}
+
+	{#if $connectSource && $connectTarget}
+		<!-- F-16, Ablauf Schritt 3: öffnet, sobald Start und Ziel gesetzt sind, unabhängig davon,
+			wodurch der Start gesetzt wurde (Kontextmenü, Detail-Kartusche F-15, Verzeichnis F-14). -->
+		<RelationDialog
+			open={true}
+			from={$connectSource}
+			to={$connectTarget}
+			onCreated={() => cancelConnection()}
+			onCancel={() => cancelConnection()}
+		/>
+	{/if}
 </div>
+
+<style>
+	/* F-16, Ablauf Schritt 2, FR-14: Hinweisband über der Karte, solange ein Verbindungsvorgang
+	   läuft. Keine Vorlage in design/03-seekarte.html (design/README.md: Kontextmenü und seine
+	   Begleitelemente sind „noch zu entwerfen"), deshalb als schlanke Kartusche oben mittig über
+	   der Kartenfläche, mit denselben Token wie jede andere Kartusche der Anwendung. */
+	.connect-banner {
+		position: absolute;
+		top: 16px;
+		left: 50%;
+		transform: translateX(-50%);
+		z-index: 7;
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 9px 10px 9px 16px;
+		font-size: 13px;
+		color: var(--ink);
+	}
+	.connect-banner button {
+		background: transparent;
+		border: 1px solid var(--hair);
+		color: var(--ink);
+		padding: 6px 11px;
+		font-size: 12.5px;
+		cursor: pointer;
+	}
+	.connect-banner button:hover {
+		border-color: var(--ink);
+	}
+</style>

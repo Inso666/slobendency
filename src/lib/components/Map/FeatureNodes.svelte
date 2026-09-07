@@ -17,19 +17,51 @@
 	Schriftgrößen werden gegen den Maßstab gerechnet, damit sie bei Maßstab 0,5 nicht unter die
 	geforderte Mindestschriftgröße von 9 px fallen, bei größerem Maßstab aber regulär mit
 	skalieren (F-12, Abschnitt „Verhalten").
+
+	F-16 · Kontextmenü und Verbindungsvorgang (features/F-16-verbindungsvorgang.md, Abschnitt
+	„Ablauf" Schritt 1): Jeder Signaturpunkt trägt `data-feature-id`, über das
+	MapCanvas.svelte einen Rechtsklick anywhere im SVG dem richtigen Feature zuordnet (dortiger
+	Kommentar erklärt, warum das `contextmenu`-Abfangen selbst dort und nicht hier sitzt: die
+	native Menüunterdrückung muss früher greifen, als ein hier gesetzter Listener es könnte).
+	Long-Press (UI-12, etwa 500 ms) bildet über `onLongPress` denselben Aufruf über Touch nach —
+	kein echtes `contextmenu`-Ereignis steht dahinter, deshalb ein eigener Kanal, direkt an
+	dieser Komponente. Der gesetzte Startpunkt eines laufenden Verbindungsvorgangs
+	(`connectSource`, src/lib/store/selection.ts) bleibt dauerhaft markiert, solange der Vorgang
+	läuft (FR-14): eine gestrichelte Kontur in --magenta um den Signaturpunkt.
 -->
 <script lang="ts">
 	import { placeFeatures, type Placement } from '../../layout/jitter';
 	import { PLOT } from '../../layout/scales';
 	import type { Feature, FeatureId, FeatureMap } from '../../model/types';
 	import { highlight } from '../../store/highlight';
-	import { selectedId } from '../../store/selection';
+	import { connectSource, selectedId } from '../../store/selection';
 
 	/** Radius des Halo-Kreises um das selektierte Feature (F-11, Abschnitt „Darstellung"). */
 	const HALO_RADIUS = 15;
 
-	let { map, domainMax, scale = 1 }: { map: FeatureMap; domainMax: number; scale?: number } =
-		$props();
+	/** Radius der gestrichelten Startmarkierung — eine Stufe größer als der Halo, damit beide
+	 * gleichzeitig sichtbar bleiben, wenn Selektion und Verbindungsstart dasselbe Feature
+	 * betreffen (F-16, Ablauf Schritt 2, FR-14). */
+	const CONNECT_START_RADIUS = 19;
+
+	/** Dauer eines Long-Press bis zum Öffnen des Kontextmenüs (F-16, Ablauf Schritt 1: "auf
+	 * Mobilgeräten Long-Press, etwa 500 ms"; PRD UI-12). */
+	const LONG_PRESS_MS = 500;
+
+	let {
+		map,
+		domainMax,
+		scale = 1,
+		onLongPress
+	}: {
+		map: FeatureMap;
+		domainMax: number;
+		scale?: number;
+		/** Long-Press auf einem Touchgerät (F-16, Ablauf Schritt 1; PRD UI-12) — meldet
+		 * Bildschirmposition und Kennung wie ein Rechtsklick, den MapCanvas.svelte für einen
+		 * Feature-Treffer über `onContextMenu` weitergibt. */
+		onLongPress: (x: number, y: number, id: FeatureId) => void;
+	} = $props();
 
 	/** Radius des Signaturpunkts (F-09, Abschnitt „Darstellung"). */
 	const NODE_RADIUS = 8;
@@ -103,18 +135,54 @@
 	/** Klick auf ein Feature selektiert es (FR-40); die Karte reagiert darauf nie selbst mit
 	 * einer eigenen Ableitung der Hervorhebung — das übernimmt store/highlight.ts. Bricht die
 	 * Ereigniskette ab, damit MapCanvas.svelte den Klick nicht zusätzlich als Klick auf freie
-	 * Fläche wertet (F-11, Abschnitt „Interaktion"). */
+	 * Fläche wertet (F-11, Abschnitt „Interaktion"). Ein Klick, der unmittelbar auf einen
+	 * erfolgreichen Long-Press folgt (derselbe Touch, F-16), selektiert nicht zusätzlich — das
+	 * Kontextmenü ist bereits die Antwort auf diese Berührung. */
 	function selectFeature(event: MouseEvent, id: FeatureId): void {
 		event.stopPropagation();
+		if (longPressFired) {
+			longPressFired = false;
+			return;
+		}
 		selectedId.set(id);
 	}
 
-	/** Stoppt Maus-/Touch-Beginn auf einem Feature, damit MapCanvas.svelte daraus kein Ziehen
+	/** Stoppt Maus-Beginn auf einem Feature, damit MapCanvas.svelte daraus kein Ziehen
 	 * auf freier Fläche macht (F-12, Abschnitt „Verhalten": „Ein Ziehen, das auf einem Feature
 	 * beginnt, verschiebt die Karte nicht"). Der Klick selbst (Selektion) läuft unbeeinflusst
 	 * über selectFeature() weiter. */
-	function stopDragStart(event: MouseEvent | TouchEvent): void {
+	function stopDragStart(event: MouseEvent): void {
 		event.stopPropagation();
+	}
+
+	/** Laufender Long-Press-Timer, oder undefined ohne laufenden Druck (F-16, Ablauf Schritt 1;
+	 * PRD UI-12). Je ein Timer über alle Features hinweg genügt — ein Touchgerät führt ohnehin
+	 * nur einen Druck gleichzeitig aus. */
+	let longPressTimer: ReturnType<typeof setTimeout> | undefined;
+
+	/** True unmittelbar nachdem ein Long-Press das Kontextmenü geöffnet hat, bis zum nächsten
+	 * Klick auf demselben Feature (siehe selectFeature()) — verhindert, dass derselbe Touch das
+	 * Feature zusätzlich über den anschließenden synthetischen Klick selektiert. */
+	let longPressFired = false;
+
+	function stopTouchDragStart(event: TouchEvent, id: FeatureId): void {
+		event.stopPropagation();
+		const touch = event.touches[0];
+		if (!touch) return;
+		const point = { x: touch.clientX, y: touch.clientY };
+		longPressTimer = setTimeout(() => {
+			longPressTimer = undefined;
+			longPressFired = true;
+			onLongPress(point.x, point.y, id);
+		}, LONG_PRESS_MS);
+	}
+
+	/** Bricht einen laufenden Long-Press-Timer ab — Loslassen, Bewegen oder Abbrechen der
+	 * Berührung vor Ablauf der Frist zählt nicht als Long-Press (F-16, Ablauf Schritt 1). */
+	function cancelLongPress(): void {
+		if (longPressTimer === undefined) return;
+		clearTimeout(longPressTimer);
+		longPressTimer = undefined;
 	}
 </script>
 
@@ -143,13 +211,18 @@
 		{@const flipLeft = nearRightEdge(placement.x)}
 		{@const isSelected = placement.id === $selectedId}
 		{@const isDimmed = $highlight !== null && !$highlight.features.has(placement.id)}
+		{@const isConnectStart = placement.id === $connectSource}
 		<g
 			class="node"
 			class:sel={isSelected}
 			class:dim={isDimmed}
+			data-feature-id={placement.id}
 			onclick={(event) => selectFeature(event, placement.id)}
 			onmousedown={stopDragStart}
-			ontouchstart={stopDragStart}
+			ontouchstart={(event) => stopTouchDragStart(event, placement.id)}
+			ontouchend={cancelLongPress}
+			ontouchmove={cancelLongPress}
+			ontouchcancel={cancelLongPress}
 		>
 			{#if isSelected}
 				<circle
@@ -158,6 +231,17 @@
 					cx={placement.x}
 					cy={placement.y}
 					r={HALO_RADIUS * sizeFactor}
+				/>
+			{/if}
+			{#if isConnectStart}
+				<!-- F-16, Ablauf Schritt 2, FR-14: gestrichelte Kontur in --magenta um den
+					Startpunkt eines laufenden Verbindungsvorgangs, solange dieser läuft. -->
+				<circle
+					class="connect-start"
+					data-testid="connect-start-{placement.id}"
+					cx={placement.x}
+					cy={placement.y}
+					r={CONNECT_START_RADIUS * sizeFactor}
 				/>
 			{/if}
 			<circle
@@ -225,6 +309,14 @@
 		fill: none;
 		stroke: var(--magenta);
 		stroke-width: 1.2;
+	}
+	/* Startmarkierung eines laufenden Verbindungsvorgangs (F-16, Ablauf Schritt 2, FR-14):
+	   gestrichelte Kontur in --magenta, unabhängig von Selektion/Halo. */
+	.node circle.connect-start {
+		fill: none;
+		stroke: var(--magenta);
+		stroke-width: 1.4;
+		stroke-dasharray: 4 4;
 	}
 	/* Abgedunkelte Features bleiben sichtbar, treten aber deutlich zurück (FR-43). */
 	.node.dim {

@@ -22,7 +22,7 @@ import {
 } from '../model/validation';
 import type { Result } from '../model/validation';
 import type { Feature, FeatureId, FeatureMap, Relation } from '../model/types';
-import { clearSelection, connectSource, selectedId } from './selection';
+import { clearSelection, connectSource, connectTarget, selectedId } from './selection';
 
 const store = writable<FeatureMap>(emptyMap());
 
@@ -82,15 +82,19 @@ export function renameFeatureId(from: FeatureId, to: FeatureId): Result<void> {
 
 /**
  * Entfernt ein Feature samt seiner Beziehungen (INT-02) und hebt eine betroffene Selektion
- * bzw. einen betroffenen Verbindungsvorgang auf (PRD FR-46, FR-13).
+ * bzw. einen betroffenen Verbindungsvorgang auf (PRD FR-46, FR-13). Ein laufender
+ * Verbindungsvorgang endet dabei vollständig (Start *und* Ziel, F-16), nicht nur die Hälfte, die
+ * zufällig dem gelöschten Feature entsprach — eine halbe Beziehung auf ein nicht mehr
+ * existierendes Feature darf nicht offen bleiben (F-16, Abschnitt „DDD-Einordnung").
  */
 export function deleteFeature(id: FeatureId): void {
 	store.set(removeFeature(get(store), id));
 	if (get(selectedId) === id) {
 		selectedId.set(null);
 	}
-	if (get(connectSource) === id) {
+	if (get(connectSource) === id || get(connectTarget) === id) {
 		connectSource.set(null);
+		connectTarget.set(null);
 	}
 }
 
