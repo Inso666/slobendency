@@ -21,7 +21,7 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-13 | Feature-Formular | fertig | — | gemergt 06.09. 00:20 |
 | F-14 | Verzeichnis | fertig | — | gemergt 06.09. 21:18 |
 | F-15 | Detail-Kartusche | fertig | — | gemergt 06.09. 21:38 |
-| F-16 | Kontextmenü und Verbindungsvorgang | in Arbeit | feature/F-16-verbindungsvorgang | 13 Unit- und 24 E2E-Tests rot committet (992513e); ein Widerspruch im Feature-Dokument selbst entschieden (unten) |
+| F-16 | Kontextmenü und Verbindungsvorgang | in QA | feature/F-16-verbindungsvorgang | Umsetzung fertig (423126c), 164/165 E2E grün; ein Testbefund unten (fehlender Hover vor Labelprüfung, FR-45) für den QA-Agenten |
 | F-17 | Beziehungen bearbeiten und löschen | offen | — | — |
 | F-18 | Import-Dialog | offen | — | — |
 | F-19 | Export-Dialog | offen | — | — |
@@ -168,6 +168,18 @@ und baut deshalb nur, dass eine zyklusschließende Beziehung anstandslos angeleg
 sichtbare Warnung, ihre Farbe und ihre Anklickbarkeit bleiben vollständig F-23 vorbehalten. Die
 vorgelegten F-16-Tests sind bereits entsprechend eng geschnitten (Anlegen ja, Warnung nein) —
 keine Teständerung nötig, nur diese Klarstellung für Feature- und QA-Agent.
+
+**Fehlender Hover vor Labelprüfung in F-16 (07.09.).** `e2e/F-16-verbindungsvorgang.spec.ts`, Test
+„übernimmt eine optionale Beschriftung in die neue Beziehung", prüft `edge-label-a-c-relates`
+unmittelbar nach dem Anlegen auf Sichtbarkeit und Text — ohne vorherigen Hover oder Selektion.
+FR-45 legt aber fest, dass Kantenlabels nur bei Selektion oder Hover eingeblendet werden; das ist
+bereits durch F-10 und F-11 umgesetzt und dort selbst getestet (`e2e/F-10-kanten.spec.ts` Zeile
+218: `toBeHidden()` im Grundzustand; `e2e/F-11-selektion.spec.ts` Zeile 289: `toBeVisible()` erst
+nach Selektion). Kein Quellenwiderspruch, sondern eine Lücke im F-16-Test selbst — er hat FR-45
+schlicht nicht berücksichtigt. Festgelegt: Der Test bekommt vor der Sichtbarkeitsprüfung einen
+Hover auf die neue Kante (oder eine Selektion des beteiligten Features), wie im etablierten
+Muster aus F-10/F-11. Prüfabsicht (Beschriftung wird unverändert übernommen) und Erwartungswert
+bleiben unverändert. Der QA-Agent für F-16 setzt das um.
 
 ## Sessionprotokoll
 
