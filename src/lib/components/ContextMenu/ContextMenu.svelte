@@ -42,18 +42,33 @@
 
 	Data-testid: keins auf dieser Komponente selbst (Menü und Einträge sind über Rolle/Text
 	eindeutig ansprechbar, e2e/F-16-verbindungsvorgang.spec.ts).
+
+	F-17 · Beziehungen bearbeiten und löschen (features/F-17-beziehungen-pflegen.md, Abschnitt
+	"Umfang": "Kontextmenü auf einer Kante mit denselben zwei Einträgen [Ändern, Entfernen]").
+	Rechtsklick/Long-Press auf einer Kante liefert `target.kind === 'relation'`; das Menü trägt
+	dann den zugänglichen Namen "Beziehungsmenü" (Designentscheidung des Test-Agenten,
+	Kopfkommentar von e2e/F-17-beziehungen-pflegen.spec.ts, in derselben Musterlinie wie
+	"Feature-Menü"/"Kartenmenü"). "Ändern" öffnet denselben RelationDialog im Modus "Ändern" wie
+	die Detail-Kartusche — über `onEditRelation`, denselben Kanal, den DetailCartouche.svelte
+	verwendet (kein zweiter Mechanismus, features/README.md, Leitplanke 3). "Entfernen" ruft
+	deleteRelation (src/lib/store/mapStore.ts) unmittelbar auf, ohne Rückfrage (F-17, Abschnitt
+	"Verhalten").
 -->
 <script module lang="ts">
-	import type { FeatureId } from '../../model/types';
+	import type { FeatureId, Relation } from '../../model/types';
 
-	/** Ziel des Menüs: ein bestimmtes Feature (Rechtsklick auf dessen Signatur) oder freie
-	 * Fläche (Rechtsklick auf die Kartenfläche selbst, F-16, Abschnitt nach "Fachregeln"). */
-	export type ContextMenuTarget = { kind: 'feature'; id: FeatureId } | { kind: 'blank' };
+	/** Ziel des Menüs: ein bestimmtes Feature (Rechtsklick auf dessen Signatur), eine Beziehung
+	 * (Rechtsklick auf ihre Kante, F-17) oder freie Fläche (Rechtsklick auf die Kartenfläche
+	 * selbst, F-16, Abschnitt nach "Fachregeln"). */
+	export type ContextMenuTarget =
+		| { kind: 'feature'; id: FeatureId }
+		| { kind: 'relation'; relation: Relation }
+		| { kind: 'blank' };
 </script>
 
 <script lang="ts">
 	import { relationsOf } from '../../model/validation';
-	import { deleteFeature, map } from '../../store/mapStore';
+	import { deleteFeature, deleteRelation, map } from '../../store/mapStore';
 	import { connectSource, connectTarget, selectedId } from '../../store/selection';
 	import { displayNameOf } from '../FeatureList/listing';
 
@@ -63,6 +78,7 @@
 		target,
 		onClose,
 		onEdit,
+		onEditRelation,
 		onCreateFeature,
 		onShowWholeMap
 	}: {
@@ -76,6 +92,9 @@
 		/** "Bearbeiten" auf einem Feature — öffnet das vorbefüllte Formular aus F-13 für dieses
 		 * Feature (unabhängig davon, ob es zuvor bereits selektiert war). */
 		onEdit: (id: FeatureId) => void;
+		/** "Ändern" auf einer Beziehung (F-17) — öffnet RelationDialog.svelte im Modus "Ändern",
+		 * vorbefüllt mit Art und Beschriftung dieser Beziehung. */
+		onEditRelation: (relation: Relation) => void;
 		/** "Feature anlegen" auf freier Fläche — öffnet dasselbe Formular aus F-13 im
 		 * Anlegemodus wie der Kopfband-Knopf "+ Feature". */
 		onCreateFeature: () => void;
@@ -140,6 +159,18 @@
 
 	function createFeature(): void {
 		onCreateFeature();
+		onClose();
+	}
+
+	/** "Ändern" auf einer Beziehung (F-17, Abschnitt "Umfang"). */
+	function changeRelation(relation: Relation): void {
+		onEditRelation(relation);
+		onClose();
+	}
+
+	/** "Entfernen" auf einer Beziehung — ohne Rückfrage (F-17, Abschnitt "Verhalten"). */
+	function removeRelation(relation: Relation): void {
+		deleteRelation(relation);
 		onClose();
 	}
 
@@ -274,7 +305,11 @@
 		bind:this={menuEl}
 		class="context-menu cartouche"
 		role="menu"
-		aria-label={target.kind === 'feature' ? 'Feature-Menü' : 'Kartenmenü'}
+		aria-label={target.kind === 'feature'
+			? 'Feature-Menü'
+			: target.kind === 'relation'
+				? 'Beziehungsmenü'
+				: 'Kartenmenü'}
 		style:left="{posX}px"
 		style:top="{posY}px"
 		onkeydown={handleMenuKeydown}
@@ -296,6 +331,13 @@
 			</button>
 			<button type="button" role="menuitem" onclick={() => requestDelete(target.id)}>
 				Löschen
+			</button>
+		{:else if target.kind === 'relation'}
+			<button type="button" role="menuitem" onclick={() => changeRelation(target.relation)}>
+				Ändern
+			</button>
+			<button type="button" role="menuitem" onclick={() => removeRelation(target.relation)}>
+				Entfernen
 			</button>
 		{:else}
 			<button type="button" role="menuitem" onclick={showWholeMap}> Ganze Karte zeigen </button>

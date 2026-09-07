@@ -217,6 +217,25 @@ export function removeFeature(map: FeatureMap, id: FeatureId): FeatureMap {
 	};
 }
 
+/**
+ * Prüft INT-04 (kein doppeltes Tripel `from`/`to`/`type`) für `candidate` gegen `relations`.
+ * Einzige Prüfstelle dieser Regel (features/README.md, Leitplanke 3) — sowohl addRelation als
+ * auch updateRelation rufen diese Funktion auf, statt die Regel je Aggregatsoperation erneut zu
+ * formulieren. `excludeIndex` nimmt beim Bearbeiten die zu ändernde Beziehung selbst von der
+ * Prüfung aus, sonst schlüge jede unveränderte Bearbeitung am eigenen Tripel fehl.
+ */
+function findDuplicateTriple(
+	relations: Relation[],
+	candidate: Pick<Relation, 'from' | 'to' | 'type'>,
+	excludeIndex?: number
+): RuleViolation[] {
+	const duplicate = relations.some(
+		(r, i) =>
+			i !== excludeIndex && r.from === candidate.from && r.to === candidate.to && r.type === candidate.type
+	);
+	return duplicate ? [{ rule: 'INT-04', message: 'Beziehung existiert bereits' }] : [];
+}
+
 /** Fügt eine Beziehung hinzu. Prüft INT-02, INT-03, INT-04 sowie die Feldregeln für Kantenlabels. */
 export function addRelation(map: FeatureMap, relation: Relation): Result<FeatureMap> {
 	const errors: RuleViolation[] = [];
@@ -234,14 +253,7 @@ export function addRelation(map: FeatureMap, relation: Relation): Result<Feature
 		errors.push({ rule: 'INT-03', message: 'Beziehung darf nicht auf sich selbst verweisen' });
 	}
 
-	if (
-		map.relations.some(
-			(r) => r.from === relation.from && r.to === relation.to && r.type === relation.type
-		)
-	) {
-		errors.push({ rule: 'INT-04', message: 'Beziehung existiert bereits' });
-	}
-
+	errors.push(...findDuplicateTriple(map.relations, relation));
 	errors.push(...validateRelationLabel(relation.label));
 
 	if (errors.length > 0) return fail(errors);
@@ -249,7 +261,15 @@ export function addRelation(map: FeatureMap, relation: Relation): Result<Feature
 	return ok({ ...map, relations: [...map.relations, { ...relation }] });
 }
 
-/** Ändert Typ und/oder Label einer bestehenden Beziehung anhand ihres Index in relations. */
+/**
+ * Ändert Typ und/oder Label einer bestehenden Beziehung anhand ihres Index in relations
+ * (F-17, Abschnitt "DDD-Einordnung": `Relation` ist ein Value Object, eine Änderung ist
+ * fachlich ein Ersetzen). `from`/`to` bleiben dabei unveränderlich gesperrt — INT-03 gilt
+ * beim Bearbeiten ebenso wie beim Anlegen, nach demselben Muster, mit dem updateFeature oben
+ * die Kennung sperrt. Prüft INT-04 über dieselbe Prüfstelle wie addRelation
+ * (findDuplicateTriple), ohne die Regel hier ein zweites Mal zu formulieren
+ * (features/README.md, Leitplanke 3).
+ */
 export function updateRelation(
 	map: FeatureMap,
 	index: number,
@@ -259,8 +279,12 @@ export function updateRelation(
 		return fail([{ rule: 'NOT_FOUND', message: 'Beziehung nicht gefunden' }]);
 	}
 
-	const updated: Relation = { ...map.relations[index], ...patch };
-	const errors = validateRelationLabel(updated.label);
+	const existing = map.relations[index];
+	const updated: Relation = { ...existing, ...patch, from: existing.from, to: existing.to };
+	const errors: RuleViolation[] = [];
+
+	errors.push(...findDuplicateTriple(map.relations, updated, index));
+	errors.push(...validateRelationLabel(updated.label));
 
 	if (errors.length > 0) return fail(errors);
 

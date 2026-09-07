@@ -510,6 +510,27 @@ describe('updateRelation', () => {
 
 		expect(result.ok).toBe(false);
 	});
+
+	// F-17 · features/F-17-beziehungen-pflegen.md, Akzeptanzkriterien: "Eine Änderung, die ein
+	// vorhandenes Tripel erzeugen würde, wird abgelehnt; die ursprüngliche Beziehung bleibt
+	// unverändert." INT-04 gilt beim Ändern ebenso wie beim Anlegen (addRelation, oben).
+	it('lehnt eine Änderung ab, die ein bereits vorhandenes Tripel erzeugen würde (INT-04, F-17)', () => {
+		const map = mapWith(
+			[feature({ id: 'a' }), feature({ id: 'b' })],
+			[
+				{ from: 'a', to: 'b', type: 'requires' },
+				{ from: 'a', to: 'b', type: 'relates' }
+			]
+		);
+
+		// Index 1 ("a relates b") auf "requires" geändert würde das bereits vorhandene Tripel
+		// aus Index 0 ("a requires b") doppeln.
+		const result = updateRelation(map, 1, { type: 'requires' });
+
+		expectRejected(result, 'INT-04');
+		// Unveränderlichkeit bei Fehlschlag: die ursprüngliche Beziehung bleibt exakt bestehen.
+		expect(map.relations[1]).toEqual({ from: 'a', to: 'b', type: 'relates' });
+	});
 });
 
 describe('removeRelation', () => {

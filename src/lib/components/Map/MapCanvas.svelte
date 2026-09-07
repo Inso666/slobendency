@@ -50,12 +50,23 @@
 	Selektion auf" —, die von `clearSelection()` allein nicht zu unterscheidenden zwei Stufen
 	liegen bereits in `handleEscape()` selbst (Leitplanke 3: Fachregel steht im Aggregat/Store,
 	nicht hier).
+
+	F-17 · Beziehungen bearbeiten und löschen (features/F-17-beziehungen-pflegen.md, Abschnitt
+	„Umfang"): Ein Rechtsklick, der zuerst eine Kante trifft (`data-relation-from`/`-to`/`-type`
+	aus Edges.svelte über `closest()`), meldet `{ kind: 'relation', relation }` statt eines
+	Feature- oder Leerflächentreffers — geprüft vor dem Feature-Treffer, weil Kanten außerhalb
+	jeder Feature-Gruppe liegen und beide Prüfungen sich deshalb nie überschneiden. Die Beziehung
+	selbst wird dabei aus `map.relations` nachgeschlagen (Tripel `from`/`to`/`type` ist laut
+	INT-04 mapweit eindeutig), damit auch ein vorhandenes Label mitgeführt wird, das die
+	DOM-Attribute allein nicht trügen. Long-Press bildet denselben Treffer über Touch nach
+	(Edges.svelte, `onLongPress`) — dort liegt die volle Beziehung als `g.relation` bereits vor,
+	ein Nachschlagen entfällt.
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { VIEWBOX } from '../../layout/scales';
 	import { placeFeatures } from '../../layout/jitter';
-	import type { FeatureId, FeatureMap } from '../../model/types';
+	import type { FeatureId, FeatureMap, Relation } from '../../model/types';
 	import { clearSelection, handleEscape } from '../../store/selection';
 	import { panBy, viewport, zoomAt } from '../../store/viewport';
 	import Regions from './Regions.svelte';
@@ -73,13 +84,18 @@
 	}: {
 		map: FeatureMap;
 		domainMax: number;
-		/** Rechtsklick oder Long-Press auf der Karte (F-16, Ablauf Schritt 1) — Bildschirmposition
-		 * und Ziel (ein bestimmtes Feature oder freie Fläche). */
+		/** Rechtsklick oder Long-Press auf der Karte (F-16, Ablauf Schritt 1; F-17) —
+		 * Bildschirmposition und Ziel (ein bestimmtes Feature, eine Beziehung oder freie Fläche). */
 		onContextMenu: (x: number, y: number, target: ContextMenuTarget) => void;
 	} = $props();
 
 	function handleFeatureContextMenu(x: number, y: number, id: FeatureId): void {
 		onContextMenu(x, y, { kind: 'feature', id });
+	}
+
+	/** Long-Press auf einer Kante (F-17, Absatz zur Trefferfläche). */
+	function handleEdgeLongPress(x: number, y: number, relation: Relation): void {
+		onContextMenu(x, y, { kind: 'relation', relation });
 	}
 
 	let placements = $derived(placeFeatures(map, domainMax));
@@ -188,7 +204,23 @@
 	function handleContextMenu(event: MouseEvent): void {
 		if (!svgEl || !(event.target instanceof Node) || !svgEl.contains(event.target)) return;
 		event.preventDefault();
-		const featureEl = (event.target as Element).closest?.('[data-feature-id]');
+		const target = event.target as Element;
+
+		const edgeEl = target.closest?.('[data-relation-from]');
+		if (edgeEl) {
+			const from = edgeEl.getAttribute('data-relation-from') as FeatureId;
+			const to = edgeEl.getAttribute('data-relation-to') as FeatureId;
+			const type = edgeEl.getAttribute('data-relation-type') as Relation['type'];
+			const relation = map.relations.find(
+				(r) => r.from === from && r.to === to && r.type === type
+			);
+			if (relation) {
+				onContextMenu(event.clientX, event.clientY, { kind: 'relation', relation });
+				return;
+			}
+		}
+
+		const featureEl = target.closest?.('[data-feature-id]');
 		if (featureEl) {
 			onContextMenu(event.clientX, event.clientY, {
 				kind: 'feature',
@@ -272,7 +304,7 @@
 		<Regions {domainMax} />
 		<Grid {domainMax} />
 		<Axes {domainMax} />
-		<Edges {map} {placements} />
+		<Edges {map} {placements} onLongPress={handleEdgeLongPress} />
 		<FeatureNodes {map} {domainMax} scale={$viewport.scale} onLongPress={handleFeatureContextMenu} />
 	</g>
 </svg>

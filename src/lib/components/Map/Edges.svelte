@@ -20,17 +20,66 @@
 	ohne die Regel hier erneut zu formulieren. Kantenbeschriftungen werden ausschließlich bei
 	Hervorhebung oder Hover eingeblendet (FR-45) — Hover ist reiner Anzeigezustand dieser
 	Komponente, keine Fachregel.
+
+	F-17 · Beziehungen bearbeiten und löschen (features/F-17-beziehungen-pflegen.md, Abschnitt
+	"Umfang"/Absatz zur Trefferfläche): Jede Kante trägt `data-relation-from`/`-to`/`-type`, über
+	die MapCanvas.svelte einen Rechtsklick anywhere im SVG der richtigen Beziehung zuordnet —
+	genau das Gegenstück zu `data-feature-id` in FeatureNodes.svelte (F-16). Long-Press (UI-12,
+	dieselben 500 ms wie in FeatureNodes.svelte) bildet über `onLongPress` denselben Aufruf über
+	Touch nach; die bereits bestehende Trefferfläche aus F-11 (`.edge-hitbox`, 12 Einheiten
+	Breite) dient dabei zugleich als Ziel des Rechtsklicks, ist Kind derselben Gruppe wie die
+	sichtbare Linie und liegt so unter derselben `data-relation-*`-Zuordnung.
 -->
 <script lang="ts">
 	import { layoutEdges } from '../../layout/edges';
-	import type { FeatureMap, RelationType } from '../../model/types';
+	import type { FeatureMap, Relation, RelationType } from '../../model/types';
 	import type { Placement } from '../../layout/jitter';
 	import { highlight, relationKey } from '../../store/highlight';
 
-	let { map, placements }: { map: FeatureMap; placements: Placement[] } = $props();
+	/** Dauer eines Long-Press bis zum Öffnen des Beziehungsmenüs (F-17, Absatz zur
+	 * Trefferfläche: "Auf Touchgeräten öffnet Long-Press ... dasselbe Menü"); dieselbe Frist wie
+	 * in FeatureNodes.svelte (F-16, PRD UI-12). */
+	const LONG_PRESS_MS = 500;
+
+	let {
+		map,
+		placements,
+		onLongPress
+	}: {
+		map: FeatureMap;
+		placements: Placement[];
+		/** Long-Press auf einer Kante (F-17, Absatz zur Trefferfläche) — meldet
+		 * Bildschirmposition und die betroffene Beziehung, wie ein Rechtsklick, den
+		 * MapCanvas.svelte über `data-relation-*` derselben Beziehung zuordnet. */
+		onLongPress: (x: number, y: number, relation: Relation) => void;
+	} = $props();
 
 	/** Kennung der Beziehung, deren Kante gerade mit der Maus überfahren wird (F-11, FR-45). */
 	let hoveredKey = $state<string | null>(null);
+
+	/** Laufender Long-Press-Timer, oder undefined ohne laufenden Druck (F-17, wie
+	 * FeatureNodes.svelte, F-16). Je ein Timer über alle Kanten hinweg genügt — ein Touchgerät
+	 * führt ohnehin nur einen Druck gleichzeitig aus. */
+	let longPressTimer: ReturnType<typeof setTimeout> | undefined;
+
+	function startLongPress(event: TouchEvent, relation: Relation): void {
+		event.stopPropagation();
+		const touch = event.touches[0];
+		if (!touch) return;
+		const point = { x: touch.clientX, y: touch.clientY };
+		longPressTimer = setTimeout(() => {
+			longPressTimer = undefined;
+			onLongPress(point.x, point.y, relation);
+		}, LONG_PRESS_MS);
+	}
+
+	/** Bricht einen laufenden Long-Press-Timer ab — Loslassen, Bewegen oder Abbrechen der
+	 * Berührung vor Ablauf der Frist zählt nicht als Long-Press (wie FeatureNodes.svelte). */
+	function cancelLongPress(): void {
+		if (longPressTimer === undefined) return;
+		clearTimeout(longPressTimer);
+		longPressTimer = undefined;
+	}
 
 	/** Radius des Vorbedingungsrings (design/03-seekarte.html, Klasse `.ring`). */
 	const RING_RADIUS = 15;
@@ -76,30 +125,41 @@
 		{@const isHighlighted = $highlight !== null && $highlight.relations.has(key)}
 		{@const isDimmed = $highlight !== null && !isHighlighted}
 		{@const showLabel = isHighlighted || hoveredKey === key}
-		<line
-			data-testid="edge-{g.relation.from}-{g.relation.to}-{g.relation.type}"
-			class="edge {EDGE_CLASS[g.relation.type]}"
-			class:dim={isDimmed}
-			x1={g.x1}
-			y1={g.y1}
-			x2={g.x2}
-			y2={g.y2}
-			marker-end={MARKER[g.relation.type]}
-		/>
-		<!-- Unsichtbarer, breiterer Trefferbereich für den Hover (FR-45): die sichtbare Linie ist
-			 nur 1,4 Einheiten breit, bei `relates` zusätzlich gestrichelt — beides macht sie als
-			 Zeigerziel unzuverlässig klein bzw. lückenhaft. -->
-		<line
-			class="edge-hitbox"
-			x1={g.x1}
-			y1={g.y1}
-			x2={g.x2}
-			y2={g.y2}
-			onmouseenter={() => (hoveredKey = key)}
-			onmouseleave={() => {
-				if (hoveredKey === key) hoveredKey = null;
-			}}
-		/>
+		<g
+			class="edge-group"
+			data-relation-from={g.relation.from}
+			data-relation-to={g.relation.to}
+			data-relation-type={g.relation.type}
+			ontouchstart={(event) => startLongPress(event, g.relation)}
+			ontouchend={cancelLongPress}
+			ontouchmove={cancelLongPress}
+			ontouchcancel={cancelLongPress}
+		>
+			<line
+				data-testid="edge-{g.relation.from}-{g.relation.to}-{g.relation.type}"
+				class="edge {EDGE_CLASS[g.relation.type]}"
+				class:dim={isDimmed}
+				x1={g.x1}
+				y1={g.y1}
+				x2={g.x2}
+				y2={g.y2}
+				marker-end={MARKER[g.relation.type]}
+			/>
+			<!-- Unsichtbarer, breiterer Trefferbereich für Hover (FR-45) und Rechtsklick/Long-Press
+				 (F-17): die sichtbare Linie ist nur 1,4 Einheiten breit, bei `relates` zusätzlich
+				 gestrichelt — beides macht sie als Zeigerziel unzuverlässig klein bzw. lückenhaft. -->
+			<line
+				class="edge-hitbox"
+				x1={g.x1}
+				y1={g.y1}
+				x2={g.x2}
+				y2={g.y2}
+				onmouseenter={() => (hoveredKey = key)}
+				onmouseleave={() => {
+					if (hoveredKey === key) hoveredKey = null;
+				}}
+			/>
+		</g>
 
 		{#if g.relation.label && showLabel}
 			<text
