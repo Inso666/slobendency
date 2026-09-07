@@ -249,7 +249,16 @@ export function addRelation(map: FeatureMap, relation: Relation): Result<Feature
 	return ok({ ...map, relations: [...map.relations, { ...relation }] });
 }
 
-/** Ändert Typ und/oder Label einer bestehenden Beziehung anhand ihres Index in relations. */
+/**
+ * Ändert Typ und/oder Label einer bestehenden Beziehung anhand ihres Index in relations
+ * (F-17, Abschnitt "DDD-Einordnung": `Relation` ist ein Value Object, eine Änderung ist
+ * fachlich ein Ersetzen). `from`/`to` bleiben dabei unveränderlich gesperrt — INT-03 gilt
+ * beim Bearbeiten ebenso wie beim Anlegen, nach demselben Muster, mit dem updateFeature oben
+ * die Kennung sperrt. Prüft außerdem INT-04 gegen die übrigen Beziehungen (ohne die eigene,
+ * sonst schlüge jede unveränderte Bearbeitung an sich selbst fehl) — dieselbe Regel wie in
+ * addRelation, hier nicht ein zweites Mal formuliert, sondern wortgleich wiederholt
+ * (features/README.md, Leitplanke 3: eine Fachregel, eine Prüfstelle je Aggregatsoperation).
+ */
 export function updateRelation(
 	map: FeatureMap,
 	index: number,
@@ -259,8 +268,20 @@ export function updateRelation(
 		return fail([{ rule: 'NOT_FOUND', message: 'Beziehung nicht gefunden' }]);
 	}
 
-	const updated: Relation = { ...map.relations[index], ...patch };
-	const errors = validateRelationLabel(updated.label);
+	const existing = map.relations[index];
+	const updated: Relation = { ...existing, ...patch, from: existing.from, to: existing.to };
+	const errors: RuleViolation[] = [];
+
+	if (
+		map.relations.some(
+			(r, i) =>
+				i !== index && r.from === updated.from && r.to === updated.to && r.type === updated.type
+		)
+	) {
+		errors.push({ rule: 'INT-04', message: 'Beziehung existiert bereits' });
+	}
+
+	errors.push(...validateRelationLabel(updated.label));
 
 	if (errors.length > 0) return fail(errors);
 

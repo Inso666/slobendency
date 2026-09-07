@@ -37,33 +37,71 @@
 	Verbindungsvorgang) und Abbruch (`onCancel`, ebenso) unterschiedliche Bedeutung für den
 	Aufrufer haben, auch wenn beide hier `cancelConnection()` aufrufen — die Unterscheidung ist
 	Teil der von F-16 vorgegebenen Signatur.
+
+	F-17 · Beziehungen bearbeiten und löschen (features/F-17-beziehungen-pflegen.md, Abschnitt
+	"Umfang": "Wiederverwendung von RelationDialog.svelte aus F-16 im Modus Ändern, vorbefüllt
+	mit Art und Beschriftung"). Ist die optionale Prop `relation` gesetzt, öffnet sich dieser
+	Dialog im Modus "Ändern" statt "Anlegen": Titel und Übernehmen-Knopf lauten "Beziehung
+	ändern"/"Speichern" statt "Beziehung anlegen"/"Anlegen" (Designentscheidung des Test-Agenten,
+	Kopfkommentar von e2e/F-17-beziehungen-pflegen.spec.ts), Art und Beschriftung sind mit den
+	Werten von `relation` vorbelegt, und Quelle/Ziel erscheinen als reiner Text (`fromLabel`/
+	`toLabel`) statt als Eingabefeld — F-17, Abschnitt "Verhalten": "Quelle und Ziel sind fest
+	und werden nur angezeigt". Übernehmen ruft dann editRelation (src/lib/store/mapStore.ts) statt
+	createRelation auf; INT-03 ist dabei schon dadurch ausgeschlossen, dass `from`/`to` in diesem
+	Modus nirgends editierbar sind, INT-04 erscheint als dieselbe Meldung wie im Anlegemodus
+	(editRelation reicht das Ergebnis von updateRelation, F-02, unverändert weiter). Bei Erfolg
+	ruft der Dialog `onSaved()` auf, das dritte Rückkanal-Paar neben `onCreated`/`onCancel` —
+	beide Modi bleiben dadurch in einer Komponente vereint, statt eine zweite für "Ändern"
+	danebenzustellen (features/README.md, Leitplanke 3 sinngemäß auch für Bedienmuster).
 -->
 <script lang="ts">
-	import type { FeatureId, RelationType } from '../../model/types';
-	import { createRelation } from '../../store/mapStore';
+	import type { FeatureId, Relation, RelationType } from '../../model/types';
+	import { createRelation, editRelation } from '../../store/mapStore';
 
 	let {
 		open,
 		from,
 		to,
+		fromLabel,
+		toLabel,
+		relation,
 		onCreated,
+		onSaved,
 		onCancel
 	}: {
 		open: boolean;
 		/** Startfeature des Verbindungsvorgangs (F-16, Ablauf Schritt 2), beim Öffnen bereits
-		 * feststehend. */
+		 * feststehend. Im Modus "Ändern" (F-17) die Quelle der zu ändernden Beziehung. */
 		from: FeatureId;
 		/** Zielfeature, über "Als Ziel verwenden" gewählt (F-16, Ablauf Schritt 3), beim Öffnen
-		 * bereits feststehend. */
+		 * bereits feststehend. Im Modus "Ändern" (F-17) das Ziel der zu ändernden Beziehung. */
 		to: FeatureId;
+		/** Anzeigename von `from`, nur im Modus "Ändern" benötigt (F-17: Quelle/Ziel werden dort
+		 * nur angezeigt, nicht editierbar). Ohne Angabe erscheint ersatzweise die Kennung. */
+		fromLabel?: string;
+		/** Anzeigename von `to`, siehe `fromLabel`. */
+		toLabel?: string;
+		/** Ist diese Prop gesetzt, öffnet der Dialog im Modus "Ändern" (F-17) statt "Anlegen"
+		 * (F-16), vorbefüllt mit ihrer Art und Beschriftung. `relation` bezeichnet dabei die zu
+		 * ändernde Beziehung in ihrem aktuellen, unveränderten Stand — sie wird unverändert an
+		 * editRelation() weitergereicht, das ihren Index selbst nachschlägt (F-02/F-03). */
+		relation?: Relation;
 		/** Ruft createRelation auf; bei Erfolg ruft der Dialog selbst `onCreated()` auf, das den
 		 * Vorgang beendet (cancelConnection() aus src/lib/store/selection.ts) und den Dialog
-		 * schließt. Bei INT-03/INT-04-Verstößen bleibt der Dialog offen (Abschnitt oben). */
-		onCreated: () => void;
+		 * schließt. Bei INT-03/INT-04-Verstößen bleibt der Dialog offen (Abschnitt oben). Nur im
+		 * Anlegemodus aufgerufen. */
+		onCreated?: () => void;
+		/** Ruft editRelation auf; bei Erfolg ruft der Dialog `onSaved()` auf. Nur im Modus
+		 * "Ändern" aufgerufen (F-17). */
+		onSaved?: () => void;
 		/** "Abbrechen" im Dialog sowie ESC und Klick auf den Hintergrund (F-16, Abschnitt
-		 * "Abbruch") — bricht den gesamten Verbindungsvorgang ab, nicht nur den Dialog. */
+		 * "Abbruch") — bricht den gesamten Verbindungsvorgang (Anlegemodus) bzw. den
+		 * Bearbeitungsvorgang (F-17, Modus "Ändern") ab, nicht nur den Dialog. */
 		onCancel: () => void;
 	} = $props();
+
+	/** F-17: Ist `relation` gesetzt, befindet sich der Dialog im Modus "Ändern" statt "Anlegen". */
+	let isChangeMode = $derived(relation !== undefined);
 
 	/** Reihenfolge, Beschriftung und Signatur wie Legend.svelte (F-10), features/README.md
 	 * Ubiquitous Language. */
@@ -74,19 +112,22 @@
 		excludes: 'schließt aus'
 	};
 
-	let selectedType = $state<RelationType | null>(null);
-	let labelValue = $state('');
+	/** Vorbelegt im Modus "Ändern" mit der Art der zu ändernden Beziehung (F-17, Abschnitt
+	 * "Verhalten": "Dialog mit vorbelegter Art und Beschriftung"); leer im Anlegemodus (F-16,
+	 * Ablauf Schritt 3 nennt die Auswahl der Art als eigenen Schritt). */
+	let selectedType = $state<RelationType | null>(relation?.type ?? null);
+	let labelValue = $state(relation?.label ?? '');
 	/** Meldung einer an INT-03/INT-04 gescheiterten Beziehung (F-16, Ablauf Schritt 4) —
-	 * unverändert aus dem Ergebnis von createRelation übernommen, keine eigene Formulierung
-	 * (features/README.md, Leitplanke 3). */
+	 * unverändert aus dem Ergebnis von createRelation/editRelation übernommen, keine eigene
+	 * Formulierung (features/README.md, Leitplanke 3). */
 	let errorMessage = $state<string | undefined>(undefined);
 
 	let dialogEl: HTMLDialogElement | undefined = $state();
 
-	/** True, sobald createRelation erfolgreich war — unterscheidet in handleDialogClose()
-	 * zwischen dem (hier nie über dialogEl.close() ausgelösten) Erfolgsfall und einem
-	 * Abbruch über das native Escape-Verhalten des <dialog>. */
-	let created = false;
+	/** True, sobald createRelation/editRelation erfolgreich war — unterscheidet in
+	 * handleDialogClose() zwischen dem (hier nie über dialogEl.close() ausgelösten) Erfolgsfall
+	 * und einem Abbruch über das native Escape-Verhalten des <dialog>. */
+	let succeeded = false;
 
 	$effect(() => {
 		if (open && dialogEl && !dialogEl.open) dialogEl.showModal();
@@ -97,20 +138,33 @@
 		errorMessage = undefined;
 	}
 
-	/** "Anlegen" (F-16, Ablauf Schritt 4): ruft createRelation auf und zeigt eine Ablehnung
-	 * (INT-03, INT-04) unverändert im Dialog, der dabei offen bleibt. Gelingt der Aufruf — auch
-	 * wenn er einen Zyklus schließt (INT-05) —, endet der Vorgang über onCreated() (Abschnitt am
+	/** "Anlegen"/"Speichern" (F-16, Ablauf Schritt 4; F-17, Abschnitt "Verhalten"): ruft je nach
+	 * Modus createRelation oder editRelation auf und zeigt eine Ablehnung (INT-03, INT-04)
+	 * unverändert im Dialog, der dabei offen bleibt. Gelingt der Aufruf — auch wenn er einen
+	 * Zyklus schließt (INT-05) —, endet der Vorgang über onCreated()/onSaved() (Abschnitt am
 	 * Dateianfang). */
-	function handleCreateClick(): void {
+	function handleSubmitClick(): void {
 		if (selectedType === null) return;
 		const label = labelValue.trim() === '' ? undefined : labelValue;
+
+		if (relation) {
+			const result = editRelation(relation, { type: selectedType, label });
+			if (!result.ok) {
+				errorMessage = result.errors.map((error) => error.message).join('; ');
+				return;
+			}
+			succeeded = true;
+			onSaved?.();
+			return;
+		}
+
 		const result = createRelation({ from, to, type: selectedType, label });
 		if (!result.ok) {
 			errorMessage = result.errors.map((error) => error.message).join('; ');
 			return;
 		}
-		created = true;
-		onCreated();
+		succeeded = true;
+		onCreated?.();
 	}
 
 	function handleCancelClick(): void {
@@ -125,10 +179,10 @@
 	}
 
 	/** Läuft beim nativen Schließen über Escape (F-16, Abschnitt "Abbruch") — nicht aber im
-	 * Erfolgsfall, der die Komponente stattdessen über onCreated()/den Aufrufer aushängt, ohne
-	 * dialogEl.close() aufzurufen. */
+	 * Erfolgsfall, der die Komponente stattdessen über onCreated()/onSaved()/den Aufrufer
+	 * aushängt, ohne dialogEl.close() aufzurufen. */
 	function handleDialogClose(): void {
-		if (!created) onCancel();
+		if (!succeeded) onCancel();
 	}
 </script>
 
@@ -141,7 +195,21 @@
 		onclick={handleDialogClick}
 		onclose={handleDialogClose}
 	>
-		<h2 id="relation-dialog-title">Beziehung anlegen</h2>
+		<h2 id="relation-dialog-title">{isChangeMode ? 'Beziehung ändern' : 'Beziehung anlegen'}</h2>
+
+		{#if isChangeMode}
+			<!-- F-17, Abschnitt "Verhalten": "Quelle und Ziel sind fest und werden nur angezeigt." -->
+			<div class="parties">
+				<div>
+					<span class="lbl">Quelle</span>
+					<b>{fromLabel ?? from}</b>
+				</div>
+				<div>
+					<span class="lbl">Ziel</span>
+					<b>{toLabel ?? to}</b>
+				</div>
+			</div>
+		{/if}
 
 		{#if errorMessage}
 			<p class="field-error">{errorMessage}</p>
@@ -208,9 +276,9 @@
 				type="button"
 				class="btn pri"
 				disabled={selectedType === null}
-				onclick={handleCreateClick}
+				onclick={handleSubmitClick}
 			>
-				Anlegen
+				{isChangeMode ? 'Speichern' : 'Anlegen'}
 			</button>
 		</div>
 	</dialog>
@@ -233,6 +301,23 @@
 		font-family: 'Fraunces', serif;
 		font-weight: 600;
 		font-size: 19px;
+	}
+	/* F-17, Modus "Ändern": Quelle/Ziel als reiner Text, keine Eingabe (Abschnitt "Verhalten"). */
+	.parties {
+		display: flex;
+		gap: 18px;
+		padding: 14px 20px 0;
+	}
+	.parties .lbl {
+		display: block;
+		font-size: 10.5px;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: var(--ink-soft);
+	}
+	.parties b {
+		font-size: 14px;
+		font-weight: 600;
 	}
 	.types {
 		display: flex;

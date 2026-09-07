@@ -46,6 +46,15 @@
 	Start über das Kontextmenü, die Detail-Kartusche (F-15) oder das Verzeichnis (F-14, FR-15) gesetzt
 	wurde. Das Hinweisband „Ziel wählen — ESC bricht ab" (F-16, Ablauf Schritt 2, FR-14) ist an
 	`connectSource` gebunden und läuft über denselben `cancelConnection()` wie sein Knopf „Abbrechen".
+
+	F-17 · Beziehungen bearbeiten und löschen (features/F-17-beziehungen-pflegen.md): `editingRelation`
+	hält die über „Ändern" (Detail-Kartusche oder Beziehungsmenü) gewählte Beziehung; ist sie gesetzt,
+	öffnet sich hier eine zweite RelationDialog.svelte-Instanz im Modus „Ändern" — unabhängig von der
+	bereits bestehenden Instanz für den Verbindungsvorgang (F-16), weil beide nie gleichzeitig
+	auftreten (ein laufender Verbindungsvorgang und ein Bearbeitungsvorgang schließen sich gegenseitig
+	nicht aus den Quellen ergebend aus, in der Praxis aber, weil beide Auslöser verschiedene
+	Bedienhandlungen sind). Sowohl DetailCartouche.svelte als auch ContextMenu.svelte reichen dafür
+	denselben Kanal `openChangeRelation` durch (features/README.md, Leitplanke 3).
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
@@ -58,12 +67,13 @@
 	import MapCanvas from '$lib/components/Map/MapCanvas.svelte';
 	import FeatureModal from '$lib/components/FeatureModal/FeatureModal.svelte';
 	import FeatureList from '$lib/components/FeatureList/FeatureList.svelte';
+	import { displayNameOf } from '$lib/components/FeatureList/listing';
 	import DetailCartouche from '$lib/components/Tooltip/DetailCartouche.svelte';
 	import ContextMenu, {
 		type ContextMenuTarget
 	} from '$lib/components/ContextMenu/ContextMenu.svelte';
 	import RelationDialog from '$lib/components/RelationDialog/RelationDialog.svelte';
-	import type { FeatureId } from '$lib/model/types';
+	import type { FeatureId, Relation } from '$lib/model/types';
 
 	// Synchron beim Aufbau der Komponente, nicht in onMount: FR-72 verlangt, dass der
 	// gespeicherte Bestand vor dem ersten Rendern der Karte wiederhergestellt ist.
@@ -171,6 +181,27 @@
 		modalMode = 'create';
 		modalOpen = true;
 	}
+
+	// F-17 · Beziehungen bearbeiten und löschen (features/F-17-beziehungen-pflegen.md, Abschnitt
+	// „Umfang"). Ausgelöst über „Ändern" in der Detail-Kartusche (F-15) oder im Beziehungsmenü
+	// einer Kante (F-16-Kontextmenü, hier erweitert) — derselbe Kanal für beide.
+	let editingRelation = $state<Relation | null>(null);
+
+	function openChangeRelation(relation: Relation): void {
+		editingRelation = relation;
+	}
+
+	function closeChangeRelation(): void {
+		editingRelation = null;
+	}
+
+	/** Anzeigename eines Features anhand seiner Kennung, für die Quelle/Ziel-Anzeige im
+	 * RelationDialog-Modus „Ändern" (F-17, Abschnitt „Verhalten": "Quelle und Ziel ... werden nur
+	 * angezeigt"). Unbekannte Kennungen (sollten hier nie vorkommen) fallen auf sich selbst zurück. */
+	function featureLabel(id: FeatureId): string {
+		const feature = $map.features.find((f) => f.id === id);
+		return feature ? displayNameOf(feature) : id;
+	}
 </script>
 
 <svelte:window onkeydown={handleViewMenuKeydown} />
@@ -249,7 +280,13 @@
 	<main class="chart">
 		<MapCanvas map={$map} {domainMax} onContextMenu={openContextMenu} />
 		{#if $selectedFeature}
-			<DetailCartouche map={$map} feature={$selectedFeature} {domainMax} onEdit={openEditModal} />
+			<DetailCartouche
+				map={$map}
+				feature={$selectedFeature}
+				{domainMax}
+				onEdit={openEditModal}
+				onEditRelation={openChangeRelation}
+			/>
 		{/if}
 		<FeatureList
 			open={directoryOpen}
@@ -284,6 +321,7 @@
 			target={contextMenu.target}
 			onClose={closeContextMenu}
 			onEdit={editFeatureFromDirectory}
+			onEditRelation={openChangeRelation}
 			onCreateFeature={openCreateModalFromContextMenu}
 			onShowWholeMap={() => resetViewport()}
 		/>
@@ -298,6 +336,21 @@
 			to={$connectTarget}
 			onCreated={() => cancelConnection()}
 			onCancel={() => cancelConnection()}
+		/>
+	{/if}
+
+	{#if editingRelation}
+		<!-- F-17, Abschnitt "Umfang": derselbe RelationDialog wie F-16, hier im Modus "Ändern",
+			ausgelöst über die Detail-Kartusche oder das Beziehungsmenü einer Kante. -->
+		<RelationDialog
+			open={true}
+			from={editingRelation.from}
+			to={editingRelation.to}
+			fromLabel={featureLabel(editingRelation.from)}
+			toLabel={featureLabel(editingRelation.to)}
+			relation={editingRelation}
+			onSaved={closeChangeRelation}
+			onCancel={closeChangeRelation}
 		/>
 	{/if}
 </div>

@@ -34,19 +34,37 @@
 	(features/STATUS.md, Auflage zu F-15) — er darf auf der Seite nur einmal vorkommen. Der
 	Aufrufer (routes/+page.svelte) reicht dafür `onEdit` durch, das dasselbe Formular öffnet, das
 	zuvor der Kopfband-Knopf öffnete.
+
+	F-17 · Beziehungen bearbeiten und löschen (features/F-17-beziehungen-pflegen.md, Abschnitt
+	"Umfang": "je Beziehungszeile die Aktionen Ändern und Entfernen, sichtbar bei Hover und bei
+	Tastaturfokus"). Beide Knöpfe sind immer im DOM vorhanden (sonst wäre "sichtbar ... bei
+	Tastaturfokus" — also Erreichbarkeit ohne vorherigen Hover — nicht möglich) und nur über CSS
+	(`opacity`) zurückgenommen, bis die Zeile Hover oder ein enthaltenes Element den Fokus trägt.
+	"Ändern" öffnet den wiederverwendeten RelationDialog aus F-16 im Modus "Ändern" — dafür reicht
+	der Aufrufer `onEditRelation` durch, weil der Dialog seinerseits auf Seitenebene
+	(routes/+page.svelte) verwaltet wird, so wie `onEdit` bereits das Formular aus F-13 dort öffnet
+	(kein zweiter Mechanismus für dieselbe Art Aktion, features/README.md, Leitplanke 3).
+	"Entfernen" ruft dagegen deleteRelation (src/lib/store/mapStore.ts) unmittelbar hier auf — wie
+	bereits deleteFeature für "Löschen" — und entfernt ohne Rückfrage (F-17, Abschnitt
+	"Verhalten": "eine einzelne Kante ist schnell wieder angelegt"). bearingsOf (detail.ts) liefert
+	je Zeile nur Gegenüber, Art und Beschriftung, keine vollständige Relation (ihre Signatur ist
+	vom Test-Agenten vorgegeben und von F-15-Unit-Tests exakt auf diese Form geprüft) — die
+	vollständige Beziehung (`from`/`to`) wird deshalb hier aus der bekannten Blickrichtung
+	rekonstruiert, statt detail.ts’ Signatur zu erweitern.
 -->
 <script lang="ts">
-	import type { Feature, FeatureMap } from '../../model/types';
-	import { bearingsOf, quadrantLabel } from './detail';
+	import type { Feature, FeatureMap, Relation } from '../../model/types';
+	import { bearingsOf, quadrantLabel, type Bearing } from './detail';
 	import { quadrantOf } from '../../model/validation';
 	import { connectSource, selectedId } from '../../store/selection';
-	import { deleteFeature } from '../../store/mapStore';
+	import { deleteFeature, deleteRelation } from '../../store/mapStore';
 
 	let {
 		map,
 		feature,
 		domainMax,
-		onEdit
+		onEdit,
+		onEditRelation
 	}: {
 		/** Die aktive Karte — Quelle der Beziehungen (`relationsOf`, F-02). */
 		map: FeatureMap;
@@ -56,6 +74,8 @@
 		domainMax: number;
 		/** Öffnet das vorbefüllte Formular aus F-13. */
 		onEdit: () => void;
+		/** Öffnet RelationDialog.svelte im Modus "Ändern" für die übergebene Beziehung (F-17). */
+		onEditRelation: (relation: Relation) => void;
 	} = $props();
 
 	let displayName = $derived(feature.label ?? feature.id);
@@ -81,6 +101,28 @@
 	/** Klick auf ein Beziehungsziel selektiert dieses Feature (F-15, Abschnitt "Verhalten"). */
 	function selectCounterpart(id: string): void {
 		selectedId.set(id);
+	}
+
+	/** Rekonstruiert die vollständige Beziehung einer Zeile aus "Geht aus von hier" — dort ist
+	 * das aktuelle Feature stets die Quelle (F-17, Kommentar am Dateianfang). */
+	function outgoingRelation(bearing: Bearing): Relation {
+		return { from: feature.id, to: bearing.counterpartId, type: bearing.type, label: bearing.label };
+	}
+
+	/** Rekonstruiert die vollständige Beziehung einer Zeile aus "Führt hierher" — dort ist das
+	 * aktuelle Feature stets das Ziel. */
+	function incomingRelation(bearing: Bearing): Relation {
+		return { from: bearing.counterpartId, to: feature.id, type: bearing.type, label: bearing.label };
+	}
+
+	/** "Ändern" einer Beziehungszeile (F-17, Abschnitt "Umfang"). */
+	function handleEditRelation(relation: Relation): void {
+		onEditRelation(relation);
+	}
+
+	/** "Entfernen" einer Beziehungszeile — ohne Rückfrage (F-17, Abschnitt "Verhalten"). */
+	function handleRemoveRelation(relation: Relation): void {
+		deleteRelation(relation);
 	}
 
 	function handleEditClick(): void {
@@ -171,6 +213,18 @@
 							<button type="button" onclick={() => selectCounterpart(bearing.counterpartId)}>
 								{bearing.name}{#if bearing.label}<small> · {bearing.label}</small>{/if}
 							</button>
+							<span class="row-actions">
+								<button type="button" onclick={() => handleEditRelation(outgoingRelation(bearing))}>
+									Ändern
+								</button>
+								<button
+									type="button"
+									class="rm"
+									onclick={() => handleRemoveRelation(outgoingRelation(bearing))}
+								>
+									Entfernen
+								</button>
+							</span>
 						</li>
 					{/each}
 				</ul>
@@ -207,6 +261,18 @@
 							<button type="button" onclick={() => selectCounterpart(bearing.counterpartId)}>
 								{bearing.name}{#if bearing.label}<small> · {bearing.label}</small>{/if}
 							</button>
+							<span class="row-actions">
+								<button type="button" onclick={() => handleEditRelation(incomingRelation(bearing))}>
+									Ändern
+								</button>
+								<button
+									type="button"
+									class="rm"
+									onclick={() => handleRemoveRelation(incomingRelation(bearing))}
+								>
+									Entfernen
+								</button>
+							</span>
 						</li>
 					{/each}
 				</ul>
@@ -342,6 +408,34 @@
 	}
 	.bearings button:hover {
 		text-decoration: underline;
+	}
+	/* F-17: Aktionen "Ändern"/"Entfernen" einer Beziehungszeile, sichtbar bei Hover und bei
+	   Tastaturfokus (Abschnitt "Umfang") — immer im DOM, sonst wäre die Erreichbarkeit über
+	   Tastaturfokus ohne vorherigen Hover nicht möglich, nur über Opazität zurückgenommen. */
+	.bearings li {
+		justify-content: space-between;
+	}
+	.bearings .row-actions {
+		display: inline-flex;
+		flex: none;
+		gap: 8px;
+		margin-left: auto;
+		opacity: 0;
+	}
+	.bearings li:hover .row-actions,
+	.bearings li:focus-within .row-actions {
+		opacity: 1;
+	}
+	.bearings .row-actions button {
+		font-size: 11.5px;
+		color: var(--ink-soft);
+		white-space: nowrap;
+	}
+	.bearings .row-actions button:hover {
+		color: var(--ink);
+	}
+	.bearings .row-actions button.rm:hover {
+		color: var(--magenta);
 	}
 
 	.no-bearings {
