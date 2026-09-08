@@ -73,6 +73,7 @@
 		type ContextMenuTarget
 	} from '$lib/components/ContextMenu/ContextMenu.svelte';
 	import RelationDialog from '$lib/components/RelationDialog/RelationDialog.svelte';
+	import ExportDialog from '$lib/components/ExportDialog/ExportDialog.svelte';
 	import type { FeatureId, Relation } from '$lib/model/types';
 
 	// Synchron beim Aufbau der Komponente, nicht in onMount: FR-72 verlangt, dass der
@@ -101,8 +102,33 @@
 		viewMenuOpen = false;
 	}
 
-	function handleViewMenuKeydown(event: KeyboardEvent): void {
-		if (event.key === 'Escape') viewMenuOpen = false;
+	/** Menü „Exportieren" im Kopfband (F-19, Abschnitt „Umfang": „aus dem Kopfband über
+	 * Exportieren → Als Text geöffnet"). Dasselbe Muster wie das Menü „Ansicht" (F-12): ein
+	 * Knopf mit `aria-haspopup`/`aria-expanded`, der ein `.cartouche`-Panel mit weiteren Knöpfen
+	 * öffnet, statt einen zweiten Mechanismus für dieselbe Art von Bedienung einzuführen
+	 * (features/README.md, Leitplanke 3 sinngemäß auch für Bedienmuster; siehe Kopfkommentar von
+	 * e2e/F-19-export-dsl.spec.ts, Entscheidung 1). Weitere Einträge folgen mit F-20/F-21 (SVG-/
+	 * PNG-Export). */
+	let exportMenuOpen = $state(false);
+	let exportDialogOpen = $state(false);
+
+	function toggleExportMenu(): void {
+		exportMenuOpen = !exportMenuOpen;
+	}
+
+	function openExportAsText(): void {
+		exportMenuOpen = false;
+		exportDialogOpen = true;
+	}
+
+	function closeExportDialog(): void {
+		exportDialogOpen = false;
+	}
+
+	function handleHeaderMenuKeydown(event: KeyboardEvent): void {
+		if (event.key !== 'Escape') return;
+		viewMenuOpen = false;
+		exportMenuOpen = false;
 	}
 
 	// F-13 · Feature-Formular: Modalzustand des Kopfbands. `modalTrigger` merkt das auslösende
@@ -204,7 +230,7 @@
 	}
 </script>
 
-<svelte:window onkeydown={handleViewMenuKeydown} />
+<svelte:window onkeydown={handleHeaderMenuKeydown} />
 
 <div class="app">
 	<header class="ribbon">
@@ -235,6 +261,24 @@
 				{#if viewMenuOpen}
 					<div class="view-menu-panel cartouche">
 						<button type="button" onclick={showWholeMap}> Ganze Karte zeigen </button>
+					</div>
+				{/if}
+			</div>
+			<!-- F-19, Abschnitt „Umfang“: „aus dem Kopfband über Exportieren → Als Text geöffnet“.
+				Dasselbe Menü-Muster wie „Ansicht“ (F-12), siehe Kommentar bei exportMenuOpen. -->
+			<div class="view-menu">
+				<button
+					type="button"
+					class="btn"
+					aria-haspopup="true"
+					aria-expanded={exportMenuOpen}
+					onclick={toggleExportMenu}
+				>
+					Exportieren
+				</button>
+				{#if exportMenuOpen}
+					<div class="view-menu-panel cartouche">
+						<button type="button" onclick={openExportAsText}>Als Text</button>
 					</div>
 				{/if}
 			</div>
@@ -352,6 +396,11 @@
 			onSaved={closeChangeRelation}
 			onCancel={closeChangeRelation}
 		/>
+	{/if}
+
+	{#if exportDialogOpen}
+		<!-- F-19, Abschnitt "Umfang": Export-Dialog, geöffnet über "Exportieren → Als Text". -->
+		<ExportDialog open={true} map={$map} onClose={closeExportDialog} />
 	{/if}
 </div>
 
