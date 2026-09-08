@@ -55,6 +55,12 @@
 	nicht aus den Quellen ergebend aus, in der Praxis aber, weil beide Auslöser verschiedene
 	Bedienhandlungen sind). Sowohl DetailCartouche.svelte als auch ContextMenu.svelte reichen dafür
 	denselben Kanal `openChangeRelation` durch (features/README.md, Leitplanke 3).
+
+	F-18 · Import-Dialog (features/F-18-import.md): Knopf „Importieren" im Kopfband
+	(design/03-seekarte.html Zeile 223) öffnet ImportDialog.svelte. Wie die übrigen Modale hier
+	(FeatureModal, RelationDialog) merkt sich `importTrigger` das auslösende Element, damit der
+	Fokus beim Schließen dorthin zurückkehrt; der Dialog selbst unterscheidet Erfolg und Abbruch
+	nicht (siehe Kommentar am Kopf von ImportDialog.svelte) — beide rufen `onClose` gleich auf.
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
@@ -73,6 +79,7 @@
 		type ContextMenuTarget
 	} from '$lib/components/ContextMenu/ContextMenu.svelte';
 	import RelationDialog from '$lib/components/RelationDialog/RelationDialog.svelte';
+	import ImportDialog from '$lib/components/ImportDialog/ImportDialog.svelte';
 	import ExportDialog from '$lib/components/ExportDialog/ExportDialog.svelte';
 	import type { FeatureId, Relation } from '$lib/model/types';
 
@@ -221,6 +228,22 @@
 		editingRelation = null;
 	}
 
+	// F-18 · Import-Dialog (features/F-18-import.md): Knopf „Importieren" im Kopfband, siehe
+	// Kommentar am Dateianfang. `importTrigger` folgt demselben Muster wie `modalTrigger` oben.
+	let importOpen = $state(false);
+	let importTrigger: HTMLElement | null = null;
+
+	function openImportDialog(event: MouseEvent): void {
+		importTrigger = event.currentTarget as HTMLElement;
+		importOpen = true;
+	}
+
+	function closeImportDialog(): void {
+		importOpen = false;
+		importTrigger?.focus();
+		importTrigger = null;
+	}
+
 	/** Anzeigename eines Features anhand seiner Kennung, für die Quelle/Ziel-Anzeige im
 	 * RelationDialog-Modus „Ändern" (F-17, Abschnitt „Verhalten": "Quelle und Ziel ... werden nur
 	 * angezeigt"). Unbekannte Kennungen (sollten hier nie vorkommen) fallen auf sich selbst zurück. */
@@ -240,6 +263,7 @@
 		</div>
 		<div class="acts">
 			<button type="button" class="btn pri" onclick={openCreateModal}>+ Feature</button>
+			<button type="button" class="btn" onclick={openImportDialog}>Importieren</button>
 			<button
 				type="button"
 				class="btn"
@@ -396,6 +420,12 @@
 			onSaved={closeChangeRelation}
 			onCancel={closeChangeRelation}
 		/>
+	{/if}
+
+	{#if importOpen}
+		<!-- F-18, Abschnitt "Umfang": Import-Dialog, ausgelöst über den Kopfband-Knopf
+			"Importieren". -->
+		<ImportDialog open={importOpen} onClose={closeImportDialog} />
 	{/if}
 
 	{#if exportDialogOpen}
