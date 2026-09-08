@@ -10,6 +10,7 @@
 // Signatur ist vom Test-Agenten vorgegeben. Der Rumpf ist Aufgabe des Feature-Agenten.
 
 import type { FeatureMap } from '../../model/types';
+import { serialize } from '../../dsl/serializer';
 
 /** Inhaltstyp der heruntergeladenen Datei (F-19, Abschnitt „Umfang": „Inhaltstyp
  * text/plain;charset=utf-8"). */
@@ -22,7 +23,10 @@ export const EXPORT_MIME_TYPE = 'text/plain;charset=utf-8';
  * einem festen Datum testbar, statt sich auf die Systemuhr zu verlassen.
  */
 export function exportFilename(date: Date): string {
-	throw new Error('not implemented');
+	const year = String(date.getFullYear()).padStart(4, '0');
+	const month = String(date.getMonth() + 1).padStart(2, '0');
+	const day = String(date.getDate()).padStart(2, '0');
+	return `featuremap-${year}-${month}-${day}.fmap`;
 }
 
 /**
@@ -32,5 +36,5 @@ export function exportFilename(date: Date): string {
  * Export erzeugt").
  */
 export function exportFileContent(map: FeatureMap): { content: string; mimeType: string } {
-	throw new Error('not implemented');
+	return { content: serialize(map), mimeType: EXPORT_MIME_TYPE };
 }
