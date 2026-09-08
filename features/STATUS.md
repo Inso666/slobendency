@@ -25,10 +25,10 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-17 | Beziehungen bearbeiten und löschen | fertig | — | gemergt 07.09. 03:18 |
 | F-18 | Import-Dialog | fertig | — | gemergt 08.09. 23:19 |
 | F-19 | Export-Dialog | fertig | — | gemergt 08.09. 23:16 |
-| F-20 | SVG-Export | offen | — | Nachzuholen: prüfen, dass die unsichtbaren Trefferflächen der Kanten aus F-11 nicht im Export landen |
-| F-21 | PNG-Export | offen | — | — |
-| F-22 | Responsives Verhalten und Touch | offen | — | — |
-| F-23 | Fußleiste, Hinweise, Zurücksetzen | offen | — | — |
+| F-20 | SVG-Export | in Tests | — | Test-Agent schreibt Tests; Nachzuholen: prüfen, dass die unsichtbaren Trefferflächen der Kanten aus F-11 nicht im Export landen |
+| F-21 | PNG-Export | offen | — | wartet auf F-20 |
+| F-22 | Responsives Verhalten und Touch | offen | — | wartet auf F-13–F-16 (fertig), noch nicht beauftragt |
+| F-23 | Fußleiste, Hinweise, Zurücksetzen | in Tests | — | Test-Agent schreibt Tests |
 
 ## Entscheidungen des Orchestrators
 
