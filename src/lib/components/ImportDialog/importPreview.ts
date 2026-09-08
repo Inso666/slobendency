@@ -55,7 +55,22 @@ export type ImportPreview =
  * zweites Mal geprüft (features/README.md, Leitplanke 3).
  */
 export function evaluateImportText(text: string): ImportPreview {
-	throw new Error('not implemented');
+	if (text.trim() === '') {
+		return { kind: 'empty' };
+	}
+
+	const result = parse(text);
+	if (!result.ok) {
+		return { kind: 'invalid', errors: result.errors };
+	}
+
+	return {
+		kind: 'valid',
+		map: result.map,
+		featureCount: result.map.features.length,
+		relationCount: result.map.relations.length,
+		preview: result.map.features.slice(0, PREVIEW_FEATURE_LIMIT)
+	};
 }
 
 /**
@@ -66,5 +81,5 @@ export function evaluateImportText(text: string): ImportPreview {
  * auf `features.length` allein deckt deshalb beide Fälle ab.
  */
 export function replaceNeedsConfirmation(currentMap: FeatureMap): boolean {
-	throw new Error('not implemented');
+	return currentMap.features.length > 0;
 }
