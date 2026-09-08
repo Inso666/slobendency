@@ -201,7 +201,13 @@ test.describe('F-19 · Export-Dialog', () => {
 
 		await copyButton.click();
 
-		const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
+		// Windows normalisiert \n zu \r\n beim Schreiben in die System-Zwischenablage (Plattform-
+		// eigenschaft des Testrechners, kein Implementierungsfehler — vom Orchestrator freigegebene
+		// Testkorrektur). Nur der gelesene Wert wird normalisiert, nicht der erwartete.
+		const clipboardText = (await page.evaluate(() => navigator.clipboard.readText())).replace(
+			/\r\n/g,
+			'\n'
+		);
 		expect(clipboardText).toBe(text);
 		await expect(copyButton).toHaveText('Kopiert');
 
@@ -283,7 +289,13 @@ test.describe('F-19 · Export-Dialog', () => {
 
 		// "bleibt bedienbar": Kopieren funktioniert weiterhin ohne Fehler.
 		await dialog.getByTestId('export-copy-button').click();
-		const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
+		// Windows normalisiert \n zu \r\n beim Schreiben in die System-Zwischenablage (Plattform-
+		// eigenschaft des Testrechners, kein Implementierungsfehler — vom Orchestrator freigegebene
+		// Testkorrektur). Nur der gelesene Wert wird normalisiert, nicht der erwartete.
+		const clipboardText = (await page.evaluate(() => navigator.clipboard.readText())).replace(
+			/\r\n/g,
+			'\n'
+		);
 		expect(clipboardText).toBe('featuremap v1\n');
 
 		// "bleibt bedienbar": Download funktioniert weiterhin.
