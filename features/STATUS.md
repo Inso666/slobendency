@@ -24,7 +24,7 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-16 | Kontextmenü und Verbindungsvorgang | fertig | — | gemergt 07.09. 02:26 |
 | F-17 | Beziehungen bearbeiten und löschen | fertig | — | gemergt 07.09. 03:18 |
 | F-18 | Import-Dialog | in Arbeit | feature/F-18-import | 11 Unit- und 12 E2E-Tests rot committet (f5fb7f6) |
-| F-19 | Export-Dialog | in Tests | — | Test-Agent schreibt Tests |
+| F-19 | Export-Dialog | in Arbeit | feature/F-19-export-dsl | 7 Unit- und 14 E2E-Tests rot committet (ad6e431) |
 | F-20 | SVG-Export | offen | — | Nachzuholen: prüfen, dass die unsichtbaren Trefferflächen der Kanten aus F-11 nicht im Export landen |
 | F-21 | PNG-Export | offen | — | — |
 | F-22 | Responsives Verhalten und Touch | offen | — | — |
