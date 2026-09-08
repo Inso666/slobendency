@@ -208,6 +208,13 @@ test.describe('F-18 · Import-Dialog', () => {
 		await expect(uebernehmenButton(dialog)).toBeEnabled();
 		await uebernehmenButton(dialog).click();
 
+		// Persistenz (F-04) schreibt den neuen Bestand über einen 400-ms-Debounce
+		// (scheduleWrite) — vor dem Lesen aus LocalStorage muss darauf gewartet werden, wie im
+		// Schwestertest oben.
+		await expect
+			.poll(async () => (await readStoredMap(freshTab)).features.length, { timeout: 2000 })
+			.toBe(original.features.length);
+
 		const stored = await readStoredMap(freshTab);
 		const byId = (list: { id?: string; from?: string; to?: string }[]) =>
 			[...list].sort((a, b) => (a.id ?? `${a.from}${a.to}`).localeCompare(b.id ?? `${b.from}${b.to}`));
