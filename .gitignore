@@ -7,3 +7,4 @@ test-results/
 playwright-report/
 .claude/scheduled_tasks.lock
 .claude/settings.local.json
+.vercel
