@@ -93,6 +93,7 @@
 	import ExportDialog from '$lib/components/ExportDialog/ExportDialog.svelte';
 	import StatusBar from '$lib/components/StatusBar/StatusBar.svelte';
 	import NoticeBar from '$lib/components/StatusBar/NoticeBar.svelte';
+	import { downloadSvg } from '$lib/export/svg';
 	import type { FeatureId, Relation } from '$lib/model/types';
 
 	// Synchron beim Aufbau der Komponente, nicht in onMount: FR-72 verlangt, dass der
@@ -182,6 +183,28 @@
 
 	function closeExportDialog(): void {
 		exportDialogOpen = false;
+	}
+
+	/** Farbtafel des SVG-Exports (F-20, Abschnitt „Umfang": „Standardtafel für den Export ist
+	 * Tag, auch wenn die Oberfläche gerade auf Nacht steht … Im Menü Exportieren steht dafür ein
+	 * Umschalter Tafel: Tag / Nacht"). Bewusst ein eigener, von der Kopfband-Tafel ($theme, F-01)
+	 * unabhängiger Zustand mit Standardwert 'light' — genau das ist der Zweck dieses Umschalters. */
+	let svgExportTheme = $state<Theme>('light');
+
+	/** Liefert das aktuell gerenderte SVG der Karte für den Export. Minimaler Testhaken für F-20:
+	 * MapCanvas.svelte hält seine `<svg>`-Referenz intern; die Klasse "map" (F-08) identifiziert
+	 * sie hier eindeutig, ohne eine neue Schnittstelle an MapCanvas.svelte zu entwerfen — das
+	 * bleibt, falls nötig, Aufgabe des Feature-Agenten. */
+	function currentMapSvg(): SVGSVGElement | null {
+		return document.querySelector<SVGSVGElement>('svg.map');
+	}
+
+	/** Eintrag „Als SVG" im Menü „Exportieren" (F-20, Abschnitt „Umfang": FR-63). */
+	function exportAsSvg(): void {
+		exportMenuOpen = false;
+		const svgEl = currentMapSvg();
+		if (!svgEl) return;
+		downloadSvg(svgEl, { theme: svgExportTheme });
 	}
 
 	function handleHeaderMenuKeydown(event: KeyboardEvent): void {
@@ -356,6 +379,26 @@
 				{#if exportMenuOpen}
 					<div class="view-menu-panel cartouche">
 						<button type="button" onclick={openExportAsText}>Als Text</button>
+						<!-- F-20, Abschnitt „Umfang": „Standardtafel für den Export ist Tag … Im Menü
+							Exportieren steht dafür ein Umschalter Tafel: Tag / Nacht." Eigener, von der
+							Kopfband-Tafel unabhängiger Umschalter, siehe Kommentar bei svgExportTheme. -->
+						<span class="sw export-theme-sw" role="group" aria-label="Tafel für den Bildexport">
+							<button
+								type="button"
+								aria-pressed={svgExportTheme === 'light'}
+								onclick={() => (svgExportTheme = 'light')}
+							>
+								Tag
+							</button>
+							<button
+								type="button"
+								aria-pressed={svgExportTheme === 'dark'}
+								onclick={() => (svgExportTheme = 'dark')}
+							>
+								Nacht
+							</button>
+						</span>
+						<button type="button" onclick={exportAsSvg}>Als SVG</button>
 					</div>
 				{/if}
 			</div>
