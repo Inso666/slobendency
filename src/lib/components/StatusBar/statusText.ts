@@ -13,7 +13,7 @@
 //
 // Signatur ist vom Test-Agenten vorgegeben. Die Rümpfe sind Aufgabe des Feature-Agenten.
 
-import type { FeatureId, FeatureMap } from '../../model/types';
+import type { FeatureId, FeatureMap, Relation } from '../../model/types';
 import type { StorageState } from '../../store/persistence';
 import { displayNameOf } from '../FeatureList/listing';
 
@@ -60,7 +60,19 @@ export interface SaveStatusDisplay {
  *    Test-Agenten, siehe statusText.test.ts).
  */
 export function saveStatusText(input: SaveStatusInput): SaveStatusDisplay {
-	throw new Error('not implemented');
+	if (input.saving) {
+		return { text: 'Wird gespeichert …', warning: false };
+	}
+	if (input.storageState === 'quotaExceeded') {
+		return { text: 'Speicher voll', warning: true };
+	}
+	if (input.storageState === 'unavailable') {
+		return { text: 'Nicht gespeichert — Sitzungsmodus', warning: false };
+	}
+	if (input.lastSavedAt !== null) {
+		return { text: `Gespeichert ${formatSavedAt(input.lastSavedAt)}`, warning: false };
+	}
+	return { text: 'Wird gespeichert …', warning: false };
 }
 
 /**
@@ -70,7 +82,9 @@ export function saveStatusText(input: SaveStatusInput): SaveStatusDisplay {
  * einschließlich 0 → Plural ("Features"/"Beziehungen"), je Feld unabhängig gewählt.
  */
 export function inventoryText(featureCount: number, relationCount: number): string {
-	throw new Error('not implemented');
+	const featureWord = featureCount === 1 ? 'Feature' : 'Features';
+	const relationWord = relationCount === 1 ? 'Beziehung' : 'Beziehungen';
+	return `${featureCount} ${featureWord} · ${relationCount} ${relationWord}`;
 }
 
 /**
@@ -79,7 +93,8 @@ export function inventoryText(featureCount: number, relationCount: number): stri
  * (Plural ab 2).
  */
 export function cycleWarningText(cycleCount: number): string {
-	throw new Error('not implemented');
+	if (cycleCount === 0) return 'Keine Zyklen';
+	return `${cycleCount} Zyklus-Warnung${cycleCount === 1 ? '' : 'en'}`;
 }
 
 /**
@@ -87,7 +102,9 @@ export function cycleWarningText(cycleCount: number): string {
  * "Umfang": "Gespeichert 12:04"), jeweils mit führender Null.
  */
 export function formatSavedAt(date: Date): string {
-	throw new Error('not implemented');
+	const hours = date.getHours().toString().padStart(2, '0');
+	const minutes = date.getMinutes().toString().padStart(2, '0');
+	return `${hours}:${minutes}`;
 }
 
 /**
@@ -114,5 +131,44 @@ export function formatSavedAt(date: Date): string {
  *   (Zyklusschutz wie `requiresClosure`, F-07).
  */
 export function courseText(map: FeatureMap, selectedId: FeatureId | null): string {
-	throw new Error('not implemented');
+	if (selectedId === null) return '';
+
+	// Adjazenz nur über requires-Kanten (FR-41, FR-42) — dieselbe Einschränkung wie
+	// requiresClosure (F-07), hier aber nur für eine einzelne Kette gebraucht.
+	const outgoing = new Map<FeatureId, Relation[]>();
+	for (const relation of map.relations) {
+		if (relation.type !== 'requires') continue;
+		const list = outgoing.get(relation.from);
+		if (list) list.push(relation);
+		else outgoing.set(relation.from, [relation]);
+	}
+
+	const featureById = new Map(map.features.map((feature) => [feature.id, feature]));
+
+	const chain: FeatureId[] = [];
+	const visited = new Set<FeatureId>();
+	let current: FeatureId | null = selectedId;
+
+	while (current !== null && !visited.has(current)) {
+		chain.push(current);
+		visited.add(current);
+
+		const edges: Relation[] = outgoing.get(current) ?? [];
+		if (edges.length === 0) break;
+
+		// Verzweigung: das alphabetisch kleinste Ziel gewinnt (dieselbe Tie-Break-Regel wie
+		// findRequiresCycles, F-07, src/lib/graph/cycles.ts).
+		let next: FeatureId = edges[0].to;
+		for (const edge of edges) {
+			if (edge.to < next) next = edge.to;
+		}
+		current = next;
+	}
+
+	return chain
+		.map((id) => {
+			const feature = featureById.get(id);
+			return feature ? displayNameOf(feature) : id;
+		})
+		.join(' → ');
 }

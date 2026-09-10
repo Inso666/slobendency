@@ -34,4 +34,88 @@
 
 	Rumpf ist Aufgabe des Feature-Agenten. Die Komponente selbst nimmt keine Props entgegen.
 -->
-<script lang="ts"></script>
+<script lang="ts">
+	import { storageState } from '../../store/persistence';
+	import type { StorageState } from '../../store/persistence';
+
+	/** Zustände, die einen Hinweis nahelegen (F-23, Abschnitt „Umfang"): FR-74, NFR-32, NFR-31.
+	 * „ready" braucht keinen Hinweis. */
+	const NOTICE_STATES: ReadonlySet<StorageState> = new Set(['recovered', 'unavailable', 'quotaExceeded']);
+
+	/** Vom Nutzer geschlossen, seit dem letzten Wertwechsel von `storageState` (Kopfkommentar
+	 * dieser Datei: „erneutes Auftreten" heißt ein tatsächlicher Wertwechsel, auch über
+	 * zwischenzeitlich „ready" hinweg). */
+	let closed = $state(false);
+	let previousState: StorageState | undefined;
+
+	$effect(() => {
+		const current = $storageState;
+		if (previousState !== undefined && current !== previousState) {
+			closed = false;
+		}
+		previousState = current;
+	});
+
+	let visible = $derived(!closed && NOTICE_STATES.has($storageState));
+
+	const MESSAGES: Record<'recovered' | 'unavailable' | 'quotaExceeded', string> = {
+		recovered:
+			'Der gespeicherte Bestand war beschädigt und wurde durch eine leere Karte ersetzt.',
+		unavailable:
+			'Der Speicher ist nicht erreichbar — die Anwendung läuft im Sitzungsmodus. Änderungen werden nicht dauerhaft gespeichert.',
+		quotaExceeded:
+			'Der Speicher ist voll. Sichern Sie den Bestand über Exportieren, bevor weitere Änderungen verloren gehen.'
+	};
+
+	let message = $derived(
+		$storageState === 'recovered' || $storageState === 'unavailable' || $storageState === 'quotaExceeded'
+			? MESSAGES[$storageState]
+			: ''
+	);
+
+	function close(): void {
+		closed = true;
+	}
+</script>
+
+{#if visible}
+	<div class="notice cartouche" data-testid="notice-bar" role="status">
+		<p>{message}</p>
+		<button type="button" onclick={close}>Hinweis schließen</button>
+	</div>
+{/if}
+
+<style>
+	/* Kein Vorbild in design/03-seekarte.html (Kopfkommentar) — dieselbe Kartuschen-Optik wie das
+	   Hinweisband aus F-16 (.connect-banner, src/routes/+page.svelte), oben mittig über der
+	   Kartenfläche. */
+	.notice {
+		position: absolute;
+		top: 16px;
+		left: 50%;
+		transform: translateX(-50%);
+		z-index: 7;
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		max-width: min(90vw, 560px);
+		padding: 9px 10px 9px 16px;
+		font-size: 13px;
+		color: var(--ink);
+	}
+	.notice p {
+		margin: 0;
+	}
+	.notice button {
+		flex: none;
+		background: transparent;
+		border: 1px solid var(--hair);
+		color: var(--ink);
+		padding: 6px 11px;
+		font-size: 12.5px;
+		cursor: pointer;
+	}
+	.notice button:hover {
+		border-color: var(--ink);
+	}
+</style>

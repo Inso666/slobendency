@@ -51,4 +51,82 @@
 	Rumpf ist Aufgabe des Feature-Agenten. Vorgegeben sind hier nur die Absicht und die
 	erwarteten Kennzeichen; die Komponente selbst nimmt keine Props entgegen.
 -->
-<script lang="ts"></script>
+<script lang="ts">
+	import { featureCount, map, relationCount } from '../../store/mapStore';
+	import { selectedId } from '../../store/selection';
+	import { lastSavedAt, saving, storageState } from '../../store/persistence';
+	import { cycles } from '../../store/cycles';
+	import { courseText, cycleWarningText, inventoryText, saveStatusText } from './statusText';
+
+	let saveStatus = $derived(
+		saveStatusText({ saving: $saving, storageState: $storageState, lastSavedAt: $lastSavedAt })
+	);
+	let inventory = $derived(inventoryText($featureCount, $relationCount));
+	let cycleCount = $derived($cycles.length);
+	let cycleLabel = $derived(cycleWarningText(cycleCount));
+	let course = $derived(courseText($map, $selectedId));
+
+	/** Klick auf die Zyklus-Warnung: selektiert das erste Feature des ersten gefundenen Zyklus
+	 * (`Cycle.path[0]`, bereits von findRequiresCycles auf den kleinsten Bezeichner rotiert,
+	 * F-07) — die Hervorhebung seiner Kanten übernimmt store/highlight.ts (F-11) unverändert. */
+	function selectCycleStart(): void {
+		const first = $cycles[0];
+		if (!first) return;
+		selectedId.set(first.path[0]);
+	}
+</script>
+
+<footer class="foot">
+	<span data-testid="status-save" class:warn={saveStatus.warning}>{saveStatus.text}</span>
+	<span data-testid="status-inventory">{inventory}</span>
+	{#if cycleCount === 0}
+		<span data-testid="status-cycles">{cycleLabel}</span>
+	{:else}
+		<button
+			type="button"
+			class="cycle-warn"
+			data-testid="status-cycles"
+			onclick={selectCycleStart}
+		>
+			{cycleLabel}
+		</button>
+	{/if}
+	<span class="r">
+		{#if course}<span class="course-label">Kurs: </span>{/if}<span data-testid="status-course"
+			>{course}</span
+		>
+	</span>
+</footer>
+
+<style>
+	.foot span,
+	.foot button {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		min-width: 0;
+	}
+	.foot .r {
+		display: flex;
+		min-width: 0;
+	}
+	/* NFR-31: „Speicher voll" erscheint als Warnung (F-23, Abschnitt „Umfang"). */
+	.warn {
+		color: var(--magenta);
+	}
+	/* Zyklen-Warnung ist anklickbar (F-23, Abschnitt „Umfang": „anklickbar"), bleibt aber
+	   optisch Teil der Fußleiste, kein eigenständiger Knopf-Look. */
+	.cycle-warn {
+		background: transparent;
+		border: 0;
+		padding: 0;
+		margin: 0;
+		font: inherit;
+		letter-spacing: inherit;
+		color: var(--magenta);
+		cursor: pointer;
+	}
+	.cycle-warn:hover {
+		text-decoration: underline;
+	}
+</style>
