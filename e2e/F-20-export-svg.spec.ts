@@ -152,6 +152,7 @@ test.describe('F-20 · SVG-Export', () => {
 		await zoomInAt(page, { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 }, 30);
 		await expect(page.getByTestId('feature-node-d')).not.toBeInViewport();
 
+		await openExportMenu(page);
 		const { parsed } = await exportSvg(page);
 		expect(featureNodeCount(parsed)).toBe(features.length);
 		for (const feature of features) {
@@ -172,6 +173,7 @@ test.describe('F-20 · SVG-Export', () => {
 		await page.getByTestId('feature-node-a').click();
 		await expect(page.getByTestId('feature-halo-a')).toBeVisible();
 
+		await openExportMenu(page);
 		const { parsed } = await exportSvg(page);
 		expect(parsed.querySelectorAll('.dim')).toHaveLength(0);
 		expect(parsed.querySelectorAll('.sel')).toHaveLength(0);
@@ -198,6 +200,7 @@ test.describe('F-20 · SVG-Export', () => {
 		// (FR-45).
 		await expect(page.getByTestId('edge-label-a-b-relates')).toBeHidden();
 
+		await openExportMenu(page);
 		const { parsed } = await exportSvg(page);
 		const label = parsed.querySelector('[data-testid="edge-label-a-b-relates"]');
 		expect(label, 'Kantenbeschriftung sollte im Export vorhanden sein').not.toBeNull();
@@ -210,6 +213,7 @@ test.describe('F-20 · SVG-Export', () => {
 		await seedMap(page, [{ id: 'a', label: 'A', impact: 5, effort: 5 }]);
 		await page.goto('/');
 
+		await openExportMenu(page);
 		const { parsed, content } = await exportSvg(page);
 		expect(parsed.querySelector('[data-testid="map-frame"]')).not.toBeNull();
 		expect(parsed.querySelectorAll('[data-testid^="tick-x-"]').length).toBeGreaterThan(0);
@@ -229,6 +233,7 @@ test.describe('F-20 · SVG-Export', () => {
 		await seedMap(page, [{ id: 'a', label: 'A', impact: 5, effort: 5 }]);
 		await page.goto('/');
 
+		await openExportMenu(page);
 		const { content } = await exportSvg(page);
 		expect(content).not.toMatch(/<link/i);
 		expect(content).not.toMatch(/@import/i);
@@ -287,6 +292,7 @@ test.describe('F-20 · SVG-Export', () => {
 		await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 
 		// Der Umschalter „Tafel für den Bildexport" wird NICHT berührt — Standard bleibt Tag.
+		await openExportMenu(page);
 		const { parsed } = await exportSvg(page);
 		const backgroundRect = Array.from(parsed.documentElement.children).find(
 			(el) => el.tagName.toLowerCase() === 'rect'
@@ -300,6 +306,7 @@ test.describe('F-20 · SVG-Export', () => {
 		await seedMap(page, [{ id: 'a', label: 'A', impact: 5, effort: 5 }]);
 		await page.goto('/');
 
+		await openExportMenu(page);
 		const { parsed, content } = await exportSvg(page);
 		expect(content).not.toMatch(/<link[^>]+rel=["']?stylesheet/i);
 		const style = parsed.querySelector('style');
@@ -321,6 +328,7 @@ test.describe('F-20 · SVG-Export', () => {
 		// Die Trefferfläche existiert im laufenden Programm (F-11).
 		await expect(page.locator('.edge-hitbox')).toHaveCount(1);
 
+		await openExportMenu(page);
 		const { parsed, content } = await exportSvg(page);
 		expect(parsed.querySelectorAll('.edge-hitbox')).toHaveLength(0);
 		expect(content).not.toMatch(/edge-hitbox/);
@@ -335,6 +343,7 @@ test.describe('F-20 · SVG-Export', () => {
 		await seedMap(page, [{ id: 'a', label: 'A', impact: 5, effort: 5 }]);
 		await page.goto('/');
 
+		await openExportMenu(page);
 		const { filename, content } = await exportSvg(page);
 		expect(filename).toMatch(/^featuremap-\d{4}-\d{2}-\d{2}\.svg$/);
 		expect(content).toMatch(/^<\?xml|^<svg/);
@@ -346,6 +355,7 @@ test.describe('F-20 · SVG-Export', () => {
 		await seedMap(page, [{ id: 'a', label: '<script>alert(1)</script>', impact: 5, effort: 5 }]);
 		await page.goto('/');
 
+		await openExportMenu(page);
 		const { content, parsed } = await exportSvg(page);
 		expect(content).not.toMatch(/<script/i);
 		const label = parsed.querySelector('[data-testid="feature-label-a"]');

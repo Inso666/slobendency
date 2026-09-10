@@ -89,6 +89,12 @@ const FONT_MONO = 'Azeret Mono, Consolas, monospace';
  * Alle wirksamen Stilregeln der Karte (Regions.svelte, Grid.svelte, Axes.svelte, Edges.svelte,
  * FeatureNodes.svelte), mit den Token der gewählten Tafel als feste Werte statt `var(--…)`
  * (F-20, Ablauf Schritt 5). Websichere Font-Stacks statt der Familiennamen allein (Schritt 6).
+ *
+ * Bewusst ohne Regel für `.edge-hitbox`: die zugehörigen Elemente werden aus dem Klon entfernt
+ * (buildExportSvg(), unabhängig von keepSelection), eine verwaiste Regel bliebe sonst als reiner
+ * Text im `<style>`-Block zurück (F-20-AK: „Kein <style>-Verweis auf eine externe Datei bleibt
+ * übrig"; features/STATUS.md, „Nachzuholen": die Trefferflächen aus F-11 dürfen nicht im Export
+ * landen — das gilt für die Datei als Ganzes, nicht nur für die DOM-Elemente).
  */
 function exportStylesheet(theme: ThemeName): string {
 	const t = THEME_TOKENS[theme];
@@ -106,7 +112,6 @@ function exportStylesheet(theme: ThemeName): string {
 		.f-sea { fill: ${t.sea}; }
 		.hatch-line { stroke: ${t.magenta}; opacity: ${t.hatchOpacity}; }
 		.edge { fill: none; stroke-width: 1.4; }
-		.edge-hitbox { fill: none; stroke: transparent; stroke-width: 12; }
 		.e-req { stroke: ${t.ink}; }
 		.e-rel { stroke: ${t.sea}; stroke-dasharray: 4 4; }
 		.e-exc { stroke: ${t.magenta}; }
