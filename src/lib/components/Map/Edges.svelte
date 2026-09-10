@@ -35,6 +35,8 @@
 	import type { FeatureMap, Relation, RelationType } from '../../model/types';
 	import type { Placement } from '../../layout/jitter';
 	import { highlight, relationKey } from '../../store/highlight';
+	import { cycles } from '../../store/cycles';
+	import { isOnCycle } from '../../graph/cycles';
 
 	/** Dauer eines Long-Press bis zum Öffnen des Beziehungsmenüs (F-17, Absatz zur
 	 * Trefferfläche: "Auf Touchgeräten öffnet Long-Press ... dasselbe Menü"); dieselbe Frist wie
@@ -125,6 +127,7 @@
 		{@const isHighlighted = $highlight !== null && $highlight.relations.has(key)}
 		{@const isDimmed = $highlight !== null && !isHighlighted}
 		{@const showLabel = isHighlighted || hoveredKey === key}
+		{@const isCyclic = isOnCycle($cycles, g.relation)}
 		<g
 			class="edge-group"
 			data-relation-from={g.relation.from}
@@ -139,6 +142,7 @@
 				data-testid="edge-{g.relation.from}-{g.relation.to}-{g.relation.type}"
 				class="edge {EDGE_CLASS[g.relation.type]}"
 				class:dim={isDimmed}
+				class:cyclic={isCyclic}
 				x1={g.x1}
 				y1={g.y1}
 				x2={g.x2}
@@ -247,6 +251,12 @@
 		stroke-dasharray: 4 4;
 	}
 	.e-exc {
+		stroke: var(--magenta);
+	}
+	/* F-23, Abschnitt „Umfang": die am Zyklus beteiligten requires-Kanten werden auf der Karte
+	   dauerhaft in --magenta gezeichnet, auch ohne Selektion (INT-05, AK-08). Zwei Klassen
+	   (.e-req.cyclic) sind spezifischer als .e-req allein und gewinnen deshalb ohne !important. */
+	.e-req.cyclic {
 		stroke: var(--magenta);
 	}
 	.crossmark line {

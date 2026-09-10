@@ -35,6 +35,17 @@ const lastSavedAtStore = writable<Date | null>(null);
 /** Zeitpunkt des letzten erfolgreichen Schreibvorgangs, oder `null`, wenn noch keiner stattfand. */
 export const lastSavedAt: Readable<Date | null> = { subscribe: lastSavedAtStore.subscribe };
 
+const savingStore = writable<boolean>(false);
+
+/**
+ * `true`, solange der zuletzt geänderte Bestand noch nicht geschrieben wurde — also während der
+ * Bündelungsfrist (F-04, `DEBOUNCE_MS`). Von F-23 in der Fußleiste angezeigt
+ * (statusText.ts, `SaveStatusInput.saving`; hier nicht Teil des Umfangs, siehe „Nicht Teil
+ * dieses Features", das die Anzeige ausdrücklich F-23 zuweist, ohne dass F-04 dafür bereits ein
+ * Signal bereitstellt — features/F-23-statuszeile.md, Kopfkommentar von statusText.ts).
+ */
+export const saving: Readable<boolean> = { subscribe: savingStore.subscribe };
+
 /**
  * Liefert das reale `localStorage`-Objekt oder `null`, wenn schon der Zugriff darauf
  * fehlschlägt (NFR-32, z. B. mancher privater Modus).
@@ -143,8 +154,11 @@ function scheduleWrite(storage: Storage, next: FeatureMap): void {
 		clearTimeout(pendingWrite);
 	}
 
+	savingStore.set(true);
+
 	pendingWrite = setTimeout(() => {
 		pendingWrite = null;
+		savingStore.set(false);
 		try {
 			storage.setItem(STORAGE_KEY, JSON.stringify(next));
 			lastSavedAtStore.set(new Date());

@@ -61,12 +61,22 @@
 	(FeatureModal, RelationDialog) merkt sich `importTrigger` das auslösende Element, damit der
 	Fokus beim Schließen dorthin zurückkehrt; der Dialog selbst unterscheidet Erfolg und Abbruch
 	nicht (siehe Kommentar am Kopf von ImportDialog.svelte) — beide rufen `onClose` gleich auf.
+
+	F-23 · Fußleiste, Hinweise, Zurücksetzen (features/F-23-statuszeile.md): StatusBar.svelte
+	ersetzt den bisher leeren `<footer class="foot">` aus F-01 — die Komponente rendert das
+	`<footer>` selbst und liest ausschließlich vorhandene Stores (Kopfkommentar von
+	StatusBar.svelte), diese Seite reicht keine Props durch. NoticeBar.svelte liegt aus demselben
+	Grund wie `.connect-banner` (F-16) über der Kartenfläche in `<main class="chart">`. „Karte
+	zurücksetzen" (FR-75) ergänzt das bereits bestehende Menü „Ansicht" (F-12) um einen weiteren
+	Eintrag, weil das Menü bereits hier lebt — derselbe Rückfrage-Dialog wie „Feature löschen"
+	(F-14/F-15, features/STATUS.md, Entscheidung vom 06.09. zu FR-05), hier auf `resetMap()`
+	(src/lib/store/mapStore.ts) angewandt statt auf `deleteFeature`.
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { initTheme, theme, type Theme } from '$lib/store/theme';
 	import { initPersistence } from '$lib/store/persistence';
-	import { map, selectedFeature } from '$lib/store/mapStore';
+	import { map, resetMap, selectedFeature } from '$lib/store/mapStore';
 	import { cancelConnection, connectSource, connectTarget, highlightMode } from '$lib/store/selection';
 	import { domainMaxOf } from '$lib/layout/scales';
 	import { resetViewport } from '$lib/store/viewport';
@@ -81,6 +91,8 @@
 	import RelationDialog from '$lib/components/RelationDialog/RelationDialog.svelte';
 	import ImportDialog from '$lib/components/ImportDialog/ImportDialog.svelte';
 	import ExportDialog from '$lib/components/ExportDialog/ExportDialog.svelte';
+	import StatusBar from '$lib/components/StatusBar/StatusBar.svelte';
+	import NoticeBar from '$lib/components/StatusBar/NoticeBar.svelte';
 	import type { FeatureId, Relation } from '$lib/model/types';
 
 	// Synchron beim Aufbau der Komponente, nicht in onMount: FR-72 verlangt, dass der
@@ -107,6 +119,46 @@
 	function showWholeMap(): void {
 		resetViewport();
 		viewMenuOpen = false;
+	}
+
+	// F-23 · „Karte zurücksetzen" (FR-75): Rückfrage im selben Muster wie die Löschrückfrage aus
+	// F-14/F-15 (features/STATUS.md, Entscheidung vom 06.09. zu FR-05) — `role="alertdialog"`,
+	// Name „Karte zurücksetzen", Knöpfe „Zurücksetzen"/„Abbrechen", als Kartusche über die Token
+	// aus src/app.css.
+	let resetConfirmOpen = $state(false);
+	let resetConfirmEl: HTMLDialogElement | undefined;
+
+	function openResetConfirm(): void {
+		viewMenuOpen = false;
+		resetConfirmOpen = true;
+	}
+
+	function closeResetConfirm(): void {
+		resetConfirmOpen = false;
+	}
+
+	function confirmReset(): void {
+		resetConfirmOpen = false;
+		resetMap();
+	}
+
+	$effect(() => {
+		if (resetConfirmOpen) {
+			resetConfirmEl?.showModal();
+		} else {
+			resetConfirmEl?.close();
+		}
+	});
+
+	/** Escape schließt nur die Rückfrage (natives `<dialog>`-Verhalten) und darf dabei nicht
+	 * zusätzlich MapCanvas.svelte's globalen Escape-Handler (handleEscape, FR-13/FR-46) erreichen
+	 * — dasselbe Muster wie FeatureList.svelte (F-14). */
+	function handleResetConfirmKeydown(event: KeyboardEvent): void {
+		if (event.key === 'Escape') event.stopPropagation();
+	}
+
+	function featureWord(count: number): string {
+		return count === 1 ? 'Feature' : 'Features';
 	}
 
 	/** Menü „Exportieren" im Kopfband (F-19, Abschnitt „Umfang": „aus dem Kopfband über
@@ -285,6 +337,7 @@
 				{#if viewMenuOpen}
 					<div class="view-menu-panel cartouche">
 						<button type="button" onclick={showWholeMap}> Ganze Karte zeigen </button>
+						<button type="button" onclick={openResetConfirm}>Karte zurücksetzen</button>
 					</div>
 				{/if}
 			</div>
@@ -346,6 +399,7 @@
 	</header>
 
 	<main class="chart">
+		<NoticeBar />
 		<MapCanvas map={$map} {domainMax} onContextMenu={openContextMenu} />
 		{#if $selectedFeature}
 			<DetailCartouche
@@ -371,7 +425,7 @@
 		{/if}
 	</main>
 
-	<footer class="foot"></footer>
+	<StatusBar />
 
 	{#if modalOpen}
 		<FeatureModal
@@ -432,6 +486,33 @@
 		<!-- F-19, Abschnitt "Umfang": Export-Dialog, geöffnet über "Exportieren → Als Text". -->
 		<ExportDialog open={true} map={$map} onClose={closeExportDialog} />
 	{/if}
+
+	{#if resetConfirmOpen}
+		<!-- F-23, Abschnitt "Umfang", FR-75: Rückfrage vor "Karte zurücksetzen", nennt die Anzahl
+			der Features und weist auf den Export als Sicherung hin. -->
+		<dialog
+			bind:this={resetConfirmEl}
+			class="confirm cartouche"
+			role="alertdialog"
+			aria-labelledby="reset-confirm-title"
+			aria-describedby="reset-confirm-text"
+			onclose={closeResetConfirm}
+			onkeydown={handleResetConfirmKeydown}
+		>
+			<div class="confirm-body">
+				<h2 id="reset-confirm-title">Karte zurücksetzen</h2>
+				<p id="reset-confirm-text">
+					Die Karte enthält {$map.features.length} {featureWord($map.features.length)}. Alle
+					Features und Beziehungen werden dauerhaft gelöscht — sichern Sie den Bestand vorher über
+					Exportieren.
+				</p>
+				<div class="confirm-actions">
+					<button type="button" class="btn" onclick={closeResetConfirm}>Abbrechen</button>
+					<button type="button" class="btn pri" onclick={confirmReset}>Zurücksetzen</button>
+				</div>
+			</div>
+		</dialog>
+	{/if}
 </div>
 
 <style>
@@ -462,5 +543,42 @@
 	}
 	.connect-banner button:hover {
 		border-color: var(--ink);
+	}
+
+	/* F-23, FR-75: Rückfrage vor "Karte zurücksetzen" — dieselbe Kartusche wie die
+	   Löschrückfragen aus F-14/F-15 (features/STATUS.md, Entscheidung vom 06.09. zu FR-05). */
+	.confirm {
+		padding: 0;
+		margin: auto;
+		width: min(90vw, 400px);
+		color: var(--ink);
+	}
+	.confirm::backdrop {
+		background: var(--ink);
+		opacity: 0.32;
+	}
+	.confirm-body {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		padding: 18px 20px 20px;
+	}
+	.confirm-body h2 {
+		margin: 0;
+		font-family: 'Fraunces', serif;
+		font-weight: 600;
+		font-size: 19px;
+		letter-spacing: 0.005em;
+	}
+	.confirm-body p {
+		margin: 0;
+		font-size: 13.5px;
+	}
+	.confirm-actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 8px;
+		padding-top: 6px;
+		border-top: 1px solid var(--hair);
 	}
 </style>
