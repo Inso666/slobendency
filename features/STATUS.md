@@ -27,7 +27,7 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-19 | Export-Dialog | fertig | — | gemergt 08.09. 23:16 |
 | F-20 | SVG-Export | fertig | — | gemergt 10.09. 18:23 |
 | F-21 | PNG-Export | fertig | — | gemergt 10.09. 23:15 |
-| F-22 | Responsives Verhalten und Touch | in Tests | — | Test-Agent schreibt Tests |
+| F-22 | Responsives Verhalten und Touch | in Arbeit | feature/F-22-responsiv | 13 Unit- und 10 E2E-Tests rot committet (c23b468) |
 | F-23 | Fußleiste, Hinweise, Zurücksetzen | fertig | — | gemergt 10.09. 18:12 |
 
 ## Entscheidungen des Orchestrators
