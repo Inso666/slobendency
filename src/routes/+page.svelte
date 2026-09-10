@@ -94,6 +94,7 @@
 	import StatusBar from '$lib/components/StatusBar/StatusBar.svelte';
 	import NoticeBar from '$lib/components/StatusBar/NoticeBar.svelte';
 	import { downloadSvg } from '$lib/export/svg';
+	import { downloadPng, type PngScale } from '$lib/export/png';
 	import type { FeatureId, Relation } from '$lib/model/types';
 
 	// Synchron beim Aufbau der Komponente, nicht in onMount: FR-72 verlangt, dass der
@@ -205,6 +206,42 @@
 		const svgEl = currentMapSvg();
 		if (!svgEl) return;
 		downloadSvg(svgEl, { theme: svgExportTheme });
+	}
+
+	/** F-21, Abschnitt „Umfang": „Das Menü Exportieren → Als Bild bietet den Faktor als drei
+	 * Knöpfe (1×, 2×, 4×) ... und den Tafelumschalter aus F-20." Testhaken dieses Test-Agenten
+	 * (Auftrag des Orchestrators): minimale Verdrahtung, damit e2e/F-21-export-png.spec.ts gegen
+	 * ein reales Menü prüfen kann — die eigentliche Bild-Erzeugung bleibt in
+	 * src/lib/export/png.ts, Aufgabe des Feature-Agenten. */
+	const PNG_SCALES: PngScale[] = [1, 2, 4];
+	let pngTransparentBackground = $state(false);
+	/** Faktor, der gerade erzeugt wird, oder `null` — hält fest, WELCHER der drei Knöpfe
+	 * „Wird erzeugt …" zeigt und deaktiviert ist (F-21-AK: „Während der Erzeugung ist der Knopf
+	 * deaktiviert"). Das Menü bleibt dafür bewusst offen (anders als exportAsSvg/openExportAsText,
+	 * die es sofort schließen) — sonst wäre der Zwischenzustand nie sichtbar. */
+	let pngExporting = $state<PngScale | null>(null);
+	/** F-21, Abschnitt „Akzeptanzkriterien": „Scheitert die Erzeugung, erscheint ein Hinweis, und
+	 * die Anwendung bleibt bedienbar." Wortlaut ist eine Festlegung dieses Test-Agenten (in den
+	 * Quellen nicht vorgegeben, siehe Abschlussbericht), analog zum Muster von NoticeBar.svelte
+	 * (F-23: `role="status"`). */
+	let pngExportError = $state('');
+
+	async function exportAsPng(scale: PngScale): Promise<void> {
+		const svgEl = currentMapSvg();
+		if (!svgEl) return;
+		pngExportError = '';
+		pngExporting = scale;
+		try {
+			await downloadPng(svgEl, {
+				scale,
+				theme: svgExportTheme,
+				transparent: pngTransparentBackground
+			});
+		} catch {
+			pngExportError = 'Der PNG-Export ist fehlgeschlagen. Bitte erneut versuchen.';
+		} finally {
+			pngExporting = null;
+		}
 	}
 
 	function handleHeaderMenuKeydown(event: KeyboardEvent): void {
@@ -399,6 +436,45 @@
 							</button>
 						</span>
 						<button type="button" onclick={exportAsSvg}>Als SVG</button>
+						<!-- F-21, Abschnitt „Umfang": „Das Menü Exportieren → Als Bild bietet den Faktor
+							als drei Knöpfe (1×, 2×, 4×), einen Schalter Hintergrund: weiß / transparent und
+							den Tafelumschalter aus F-20" — der Tafelumschalter oben (svgExportTheme) wird
+							unverändert mitverwendet, kein zweiter Umschalter für dieselbe Sache
+							(features/README.md, Leitplanke 3). Siehe Abschlussbericht, Entscheidung 1. -->
+						<p class="lbl">Als Bild</p>
+						<span class="sw png-bg-sw" role="group" aria-label="Hintergrund für den Bildexport">
+							<button
+								type="button"
+								aria-pressed={!pngTransparentBackground}
+								onclick={() => (pngTransparentBackground = false)}
+							>
+								weiß
+							</button>
+							<button
+								type="button"
+								aria-pressed={pngTransparentBackground}
+								onclick={() => (pngTransparentBackground = true)}
+							>
+								transparent
+							</button>
+						</span>
+						<span class="sw png-scale-sw" role="group" aria-label="Auflösung des Bildexports">
+							{#each PNG_SCALES as scale (scale)}
+								<button
+									type="button"
+									data-testid={`png-export-${scale}x`}
+									disabled={pngExporting !== null}
+									onclick={() => exportAsPng(scale)}
+								>
+									{pngExporting === scale ? 'Wird erzeugt …' : `${scale}×`}
+								</button>
+							{/each}
+						</span>
+						{#if pngExportError}
+							<p class="png-export-error" role="status" data-testid="png-export-error">
+								{pngExportError}
+							</p>
+						{/if}
 					</div>
 				{/if}
 			</div>
