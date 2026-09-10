@@ -26,7 +26,7 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-18 | Import-Dialog | fertig | — | gemergt 08.09. 23:19 |
 | F-19 | Export-Dialog | fertig | — | gemergt 08.09. 23:16 |
 | F-20 | SVG-Export | fertig | — | gemergt 10.09. 18:23 |
-| F-21 | PNG-Export | in Arbeit | feature/F-21-export-png | 14 Unit- und 13 E2E-Tests rot committet (28d14d0) |
+| F-21 | PNG-Export | in QA | feature/F-21-export-png | 508 Unit- und 248 E2E-Tests grün (663720e) |
 | F-22 | Responsives Verhalten und Touch | offen | — | wartet auf F-21 (breiter Scope, nicht parallelisierbar) |
 | F-23 | Fußleiste, Hinweise, Zurücksetzen | fertig | — | gemergt 10.09. 18:12 |
 
