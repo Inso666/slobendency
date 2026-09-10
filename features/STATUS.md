@@ -26,8 +26,8 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-18 | Import-Dialog | fertig | — | gemergt 08.09. 23:19 |
 | F-19 | Export-Dialog | fertig | — | gemergt 08.09. 23:16 |
 | F-20 | SVG-Export | fertig | — | gemergt 10.09. 18:23 |
-| F-21 | PNG-Export | offen | — | — |
-| F-22 | Responsives Verhalten und Touch | offen | — | — |
+| F-21 | PNG-Export | in Tests | — | Test-Agent schreibt Tests |
+| F-22 | Responsives Verhalten und Touch | offen | — | wartet auf F-21 (breiter Scope, nicht parallelisierbar) |
 | F-23 | Fußleiste, Hinweise, Zurücksetzen | fertig | — | gemergt 10.09. 18:12 |
 
 ## Entscheidungen des Orchestrators
