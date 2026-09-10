@@ -165,10 +165,16 @@
 			/>
 		</g>
 
-		{#if g.relation.label && showLabel}
+		{#if g.relation.label}
+			<!-- F-20 · SVG-Export (features/F-20-export-svg.md, Abschnitt „Ablauf" Schritt 4):
+				die Beschriftung einer beschrifteten Beziehung muss im gerenderten SVG vorhanden
+				sein, damit buildExportSvg() sie unabhängig vom aktuellen Bildschirmzustand
+				sichtbar setzen kann — deshalb steht sie immer im DOM (F-11, FR-45 bleibt
+				gewahrt: sie ist per Stil verborgen, außer bei Hervorhebung/Hover). -->
 			<text
 				data-testid="edge-label-{g.relation.from}-{g.relation.to}-{g.relation.type}"
 				class="edge-label"
+				style:visibility={showLabel ? 'visible' : 'hidden'}
 				x={g.labelX}
 				y={g.labelY}
 				text-anchor={g.labelAnchor}
