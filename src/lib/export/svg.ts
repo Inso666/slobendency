@@ -33,6 +33,23 @@ export interface ExportOptions {
 	 * gewollt").
 	 */
 	theme?: 'light' | 'dark';
+	/**
+	 * Hintergrundrechteck in `--paper` einfügen (Schritt 7). Standard (`undefined`): `true` —
+	 * unverändertes F-20-Verhalten für den SVG-Export selbst.
+	 *
+	 * `false` lässt Schritt 7 aus. Genutzt vom PNG-Export (F-21, Abschnitt „Umfang": „... und
+	 * keinen zweiten Neutralisierungspfad" — F-21 baut vollständig auf `buildExportSvg` auf,
+	 * statt eine zweite Zeichenlogik zu bauen): F-21s Akzeptanzkriterium „mit gesetzter Option
+	 * ist er durchsichtig" ist mit dem SVG-eigenen, stets deckenden Hintergrundrechteck aus
+	 * Schritt 7 nicht erfüllbar — ein gerastertes SVG mit deckendem Rechteck ergibt nie ein
+	 * durchsichtiges PNG. Die Hintergrundfarbe (weiß standardmäßig, `--paper` der Nachttafel, oder
+	 * gar keine bei `transparent`) übernimmt in diesem Fall stattdessen die Canvas-Füllung in
+	 * `src/lib/export/png.ts` (`pngBackgroundFill`), vor dem Zeichnen (features/STATUS.md,
+	 * Entscheidung „Transparenter Hintergrund im PNG-Export, F-21 vs. F-20" vom 10.09.: „Wie das
+	 * erreicht wird — etwa ein Options-Flag an buildExportSvg(), das das Hintergrundrechteck
+	 * wegläßt — ist Sache des Feature-Agenten").
+	 */
+	background?: boolean;
 }
 
 type ThemeName = NonNullable<ExportOptions['theme']>;
@@ -246,14 +263,17 @@ export function buildExportSvg(source: SVGSVGElement, options?: ExportOptions): 
 	styleEl.textContent = exportStylesheet(theme);
 	defs.appendChild(styleEl);
 
-	// Schritt 7: Hintergrundrechteck in --paper als erstes Kind, deckt die viewBox vollständig.
-	const background = document.createElementNS(SVG_NS, 'rect');
-	background.setAttribute('x', String(viewBoxX));
-	background.setAttribute('y', String(viewBoxY));
-	background.setAttribute('width', String(viewBoxWidth));
-	background.setAttribute('height', String(viewBoxHeight));
-	background.setAttribute('fill', THEME_TOKENS[theme].paper);
-	clone.insertBefore(background, clone.firstChild);
+	// Schritt 7: Hintergrundrechteck in --paper als erstes Kind, deckt die viewBox vollständig —
+	// außer options.background ist ausdrücklich false (siehe Kommentar bei ExportOptions.background).
+	if (options?.background ?? true) {
+		const background = document.createElementNS(SVG_NS, 'rect');
+		background.setAttribute('x', String(viewBoxX));
+		background.setAttribute('y', String(viewBoxY));
+		background.setAttribute('width', String(viewBoxWidth));
+		background.setAttribute('height', String(viewBoxHeight));
+		background.setAttribute('fill', THEME_TOKENS[theme].paper);
+		clone.insertBefore(background, clone.firstChild);
+	}
 
 	// Schritt 8: als Zeichenkette ausgeben.
 	return new XMLSerializer().serializeToString(clone);
