@@ -1,4 +1,14 @@
 import { defineConfig, devices } from '@playwright/test';
+import { JSDOM } from 'jsdom';
+
+// e2e/F-20-export-svg.spec.ts liest die heruntergeladene SVG-Datei mit `new DOMParser()`
+// (F-20, Abschnitt "Tests"). Testdateien laufen in Node, nicht im Browser — Node liefert dieses
+// Browser-Global nicht. Kein Eingriff in die vorgelegte Testdatei (CLAUDE.md, Abschnitt "Regeln
+// für den Feature-Agenten"): reine Infrastruktur, die ein sonst fehlendes Node-Global über jsdom
+// (bereits Projektabhängigkeit für Vitest) nachliefert, ohne Testverhalten zu ändern.
+if (typeof (globalThis as { DOMParser?: unknown }).DOMParser === 'undefined') {
+	(globalThis as { DOMParser?: unknown }).DOMParser = new JSDOM('').window.DOMParser;
+}
 
 const PORT = 4173;
 const BASE_URL = `http://localhost:${PORT}`;
