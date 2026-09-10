@@ -28,7 +28,7 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-20 | SVG-Export | in Tests | — | Test-Agent schreibt Tests; Nachzuholen: prüfen, dass die unsichtbaren Trefferflächen der Kanten aus F-11 nicht im Export landen |
 | F-21 | PNG-Export | offen | — | wartet auf F-20 |
 | F-22 | Responsives Verhalten und Touch | offen | — | wartet auf F-13–F-16 (fertig), noch nicht beauftragt |
-| F-23 | Fußleiste, Hinweise, Zurücksetzen | in Tests | — | Test-Agent schreibt Tests |
+| F-23 | Fußleiste, Hinweise, Zurücksetzen | in Arbeit | feature/F-23-statuszeile | 22 Unit- und 15 E2E-Tests rot committet (a45fc14) |
 
 ## Entscheidungen des Orchestrators
 
