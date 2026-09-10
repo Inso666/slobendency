@@ -26,7 +26,7 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-18 | Import-Dialog | fertig | — | gemergt 08.09. 23:19 |
 | F-19 | Export-Dialog | fertig | — | gemergt 08.09. 23:16 |
 | F-20 | SVG-Export | fertig | — | gemergt 10.09. 18:23 |
-| F-21 | PNG-Export | in Tests | — | Test-Agent schreibt Tests |
+| F-21 | PNG-Export | in Arbeit | feature/F-21-export-png | 14 Unit- und 13 E2E-Tests rot committet (28d14d0) |
 | F-22 | Responsives Verhalten und Touch | offen | — | wartet auf F-21 (breiter Scope, nicht parallelisierbar) |
 | F-23 | Fußleiste, Hinweise, Zurücksetzen | fertig | — | gemergt 10.09. 18:12 |
 
@@ -180,6 +180,21 @@ schlicht nicht berücksichtigt. Festgelegt: Der Test bekommt vor der Sichtbarkei
 Hover auf die neue Kante (oder eine Selektion des beteiligten Features), wie im etablierten
 Muster aus F-10/F-11. Prüfabsicht (Beschriftung wird unverändert übernommen) und Erwartungswert
 bleiben unverändert. Der QA-Agent für F-16 setzt das um.
+
+**Transparenter Hintergrund im PNG-Export, F-21 vs. F-20 (10.09.).** `features/F-21-export-png.md`,
+Abschnitt „Ablauf" Schritt 4, nennt für die Option „transparent" nur, dass die Vorab-Füllung des
+Canvas entfällt. `buildExportSvg()` aus F-20 (Abschnitt „Ablauf" Schritt 7) zeichnet aber immer ein
+deckendes Hintergrundrechteck in Tafelfarbe in das SVG selbst — wortgleich genommen bliebe das PNG
+bei „transparent" trotzdem undurchsichtig, weil das gerasterte SVG das Rechteck mitbringt. F-21s
+eigenes Akzeptanzkriterium ist dagegen eindeutig: „mit gesetzter Option ist er durchsichtig".
+Maßgeblich ist das Akzeptanzkriterium, nicht der Ablauftext — Akzeptanzkriterien sind die
+geprüfte, verbindliche Vertragsseite einer Featurebeschreibung, der Ablaufabschnitt daneben nur
+eine unvollständige Skizze, die die SVG-Wiederverwendung aus F-20 schlicht nicht mitgedacht hat.
+Festgelegt: Der PNG-Export muss bei „transparent" tatsächlich durchsichtig rastern (Alpha 0 am
+Bildrand, wie vom Test-Agenten für F-21 geprüft). Wie das erreicht wird — etwa ein Options-Flag an
+`buildExportSvg()`, das das Hintergrundrechteck wegläßt — ist Sache des Feature-Agenten; das ist
+kein Lösungsweg, den der Orchestrator vorgibt, sondern eine Klarstellung, welche der beiden Quellen
+bei einem echten Widerspruch gilt.
 
 ## Sessionprotokoll
 
