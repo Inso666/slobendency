@@ -40,7 +40,7 @@
 // Kopfkommentar). downloadPng() wird deshalb vollständig in e2e/F-21-export-png.spec.ts geprüft
 // (echter Download-Event in einem echten Browser, der echtes Canvas-Rendering beherrscht).
 
-import type { ExportOptions } from './svg';
+import { buildExportSvg, type ExportOptions } from './svg';
 
 /** Skalierungsfaktor des PNG-Exports (F-21, Abschnitt „Umfang", FR-64: „wählbarer Faktor
  * 1×, 2×, 4×"). */
@@ -80,7 +80,15 @@ export function pngCanvasSize(
 	viewBox: { width: number; height: number },
 	scale: PngScale
 ): { width: number; height: number } {
-	throw new Error('not implemented');
+	// Die viewBox aus buildExportSvg() (F-20) kann gebrochene SVG-Einheiten enthalten (reale
+	// Bounding Boxes, Schritt 3 dort). Canvas-Pixelmaße sind ganzzahlig; auf ganze Einheiten
+	// gerundet, BEVOR mit dem Faktor multipliziert wird, garantiert das die von AK-11 verlangte
+	// exakte Vervierfachung bei 4× gegenüber 1× für jede reale viewBox — würde stattdessen jede
+	// Auflösung unabhängig aus der ungerundeten viewBox berechnet, könnten unterschiedliche
+	// Rundungsfehler je Faktor das Verhältnis verfälschen.
+	const width = Math.round(viewBox.width);
+	const height = Math.round(viewBox.height);
+	return { width: width * scale, height: height * scale };
 }
 
 /**
@@ -90,7 +98,8 @@ export function pngCanvasSize(
  * welche Tafel sonst gewählt ist.
  */
 export function pngBackgroundFill(options: PngOptions): string | null {
-	throw new Error('not implemented');
+	if (options.transparent) return null;
+	return options.theme === 'dark' ? DARK_PAPER_BACKGROUND : WHITE_BACKGROUND;
 }
 
 /**
@@ -100,7 +109,10 @@ export function pngBackgroundFill(options: PngOptions): string | null {
  * Dasselbe Datumsformat wie exportFilename() (F-19) und exportSvgFilename() (F-20).
  */
 export function pngFilename(date: Date, scale: PngScale): string {
-	throw new Error('not implemented');
+	const year = String(date.getFullYear()).padStart(4, '0');
+	const month = String(date.getMonth() + 1).padStart(2, '0');
+	const day = String(date.getDate()).padStart(2, '0');
+	return `featuremap-${year}-${month}-${day}@${scale}x.png`;
 }
 
 /**
@@ -119,5 +131,91 @@ export function pngFilename(date: Date, scale: PngScale): string {
  * die Anwendung bleibt bedienbar").
  */
 export async function downloadPng(source: SVGSVGElement, options: PngOptions): Promise<void> {
-	throw new Error('not implemented');
+	// Vor Schritt 1: Web-Fonts abwarten (src/app.html lädt Fraunces/Karla/Azeret Mono über
+	// Google Fonts mit display=swap). buildExportSvg() misst die Bounding Box über getBBox()
+	// (F-20, Ablauf Schritt 3) — solange der Browser noch die Ersatzschrift zeigt, fällt diese
+	// Messung schmaler aus als nach dem Schriftwechsel. AK-11 verlangt aber eine exakt
+	// reproduzierbare Vervierfachung zwischen zwei unabhängigen Exporten derselben,
+	// unveränderten Karte; ohne diese Wartezeile könnte der erste Export (kurz nach dem Laden,
+	// noch mit Ersatzschrift) eine andere Bounding Box liefern als ein späterer. Kein Einfluss
+	// auf F-20 (dort unverändert synchron, `buildExportSvg` bleibt unangetastet).
+	if (typeof document.fonts?.ready !== 'undefined') {
+		await document.fonts.ready;
+	}
+
+	// Schritt 1: exportfähiges SVG über buildExportSvg() (F-20) erzeugen — keine zweite
+	// Zeichenlogik (F-21, Abschnitt „DDD-Einordnung"). background:false lässt das sonst stets
+	// eingefügte Hintergrundrechteck aus Schritt 7 dort weg (svg.ts, Kommentar bei
+	// ExportOptions.background) — die Hintergrundfarbe übernimmt stattdessen die
+	// Canvas-Füllung weiter unten (pngBackgroundFill), sonst könnte "transparent" nie
+	// tatsächlich durchsichtig rastern.
+	const svgString = buildExportSvg(source, {
+		theme: options.theme,
+		keepSelection: options.keepSelection,
+		background: false
+	});
+
+	// Die viewBox von buildExportSvg() bestimmt die Bildmaße (FR-65, unabhängig vom aktuellen
+	// Zoom/Pan) — hier aus dem bereits fertigen SVG-Text gelesen (keine zweite Bounding-Box-
+	// Berechnung). Ein <img> ohne explizite width/height-Attribute würde stattdessen mit dem
+	// SVG-Standardmaß 300×150 laden, unabhängig von der viewBox — deshalb werden beide vor dem
+	// Laden explizit auf die viewBox-Maße gesetzt.
+	const parsed = new DOMParser().parseFromString(svgString, 'image/svg+xml');
+	const svgEl = parsed.documentElement as unknown as SVGSVGElement;
+	const viewBox = svgEl.viewBox.baseVal;
+	svgEl.setAttribute('width', String(viewBox.width));
+	svgEl.setAttribute('height', String(viewBox.height));
+	const serialized = new XMLSerializer().serializeToString(svgEl);
+
+	// Schritt 2: als Daten-URL in ein Image laden, decode() abwarten — scheitert das (z. B.
+	// fehlerhaftes/zu großes SVG), verwirft downloadPng() hier, der Aufrufer
+	// (src/routes/+page.svelte) zeigt daraufhin den Hinweis (F-21-AK).
+	const dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(serialized)}`;
+	const image = new Image();
+	image.src = dataUrl;
+	await image.decode();
+
+	// Schritt 3: Canvas mit breite × faktor und höhe × faktor anlegen, ctx.scale(faktor, faktor).
+	// pngCanvasSize rundet die viewBox einmalig auf ganze Einheiten (AK-11) — dieselben
+	// gerundeten Maße (nicht die ungerundete viewBox) dienen unten als Zeichenfläche in der
+	// skalierten Koordinatenebene, damit Füllung und Zeichnung den Canvas bis zum letzten Pixel
+	// decken (sonst bliebe bei gebrochener viewBox ein unlackierter Saum am Rand).
+	const canvasSize = pngCanvasSize({ width: viewBox.width, height: viewBox.height }, options.scale);
+	const drawWidth = canvasSize.width / options.scale;
+	const drawHeight = canvasSize.height / options.scale;
+
+	const canvas = document.createElement('canvas');
+	canvas.width = canvasSize.width;
+	canvas.height = canvasSize.height;
+	const ctx = canvas.getContext('2d');
+	if (!ctx) {
+		throw new Error('PNG-Export: Canvas-2D-Kontext nicht verfügbar.');
+	}
+	ctx.scale(options.scale, options.scale);
+
+	// Schritt 4: ist der Hintergrund nicht durchsichtig gewünscht, zuerst die Fläche füllen.
+	const fill = pngBackgroundFill(options);
+	if (fill) {
+		ctx.fillStyle = fill;
+		ctx.fillRect(0, 0, drawWidth, drawHeight);
+	}
+
+	// Schritt 5: zeichnen, toBlob('image/png'), Download mit Dateiname.
+	ctx.drawImage(image, 0, 0, drawWidth, drawHeight);
+
+	const blob = await new Promise<Blob>((resolve, reject) => {
+		canvas.toBlob((result) => {
+			if (result) resolve(result);
+			else reject(new Error('PNG-Export: Rasterung fehlgeschlagen.'));
+		}, 'image/png');
+	});
+
+	const url = URL.createObjectURL(blob);
+	const anchor = document.createElement('a');
+	anchor.href = url;
+	anchor.download = pngFilename(new Date(), options.scale);
+	document.body.appendChild(anchor);
+	anchor.click();
+	document.body.removeChild(anchor);
+	URL.revokeObjectURL(url);
 }

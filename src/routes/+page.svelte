@@ -700,4 +700,30 @@
 		padding-top: 6px;
 		border-top: 1px solid var(--hair);
 	}
+
+	/* F-21, Abschnitt „Umfang": Beschriftung des Bildexport-Abschnitts im Menü „Exportieren"
+	   (dasselbe Panel wie „Als Text"/„Als SVG", .view-menu-panel aus src/app.css). Kein eigenes
+	   .lbl-Vorbild dort (nur `.scope .lbl` für das Kopfband, andere Herkunft) — hier an dieselbe
+	   dezente Zwischenüberschriften-Optik angelehnt wie sonst im Menü, nur mit Token aus
+	   src/app.css. Bewusst unter `.view-menu-panel` genestet, nicht als bloßes `.lbl`: Svelte
+	   scoped Styles wirken klassenbasiert auf JEDES `.lbl`-Element dieser Komponente, auch die
+	   Kopfband-Beschriftungen „Hervorhebung"/„Tafel" in `.scope .lbl` — ein ungenesteter Zusatz
+	   hätte deren Breite mitverändert und bei 834px zum horizontalen Wrap des Kopfbands geführt
+	   (CLAUDE.md, QA-Abgleich: Breakpoint 834px). */
+	.view-menu-panel .lbl {
+		margin: 8px 10px 2px;
+		padding: 0;
+		font-size: 11px;
+		letter-spacing: 0.04em;
+		color: var(--ink-soft);
+	}
+
+	/* F-21-AK: „Scheitert die Erzeugung, erscheint ein Hinweis." Dieselbe Warnfarbe wie
+	   StatusBar.svelte (.warn, F-23: „Speicher voll") statt eines neuen Farbbezugs. */
+	.png-export-error {
+		margin: 4px 10px 8px;
+		padding: 0;
+		font-size: 12px;
+		color: var(--magenta);
+	}
 </style>
