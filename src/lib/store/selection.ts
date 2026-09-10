@@ -7,7 +7,8 @@
 //
 // Signatur ist vom Test-Agenten vorgegeben. Der Rumpf von clearSelection() ist Aufgabe des
 // Feature-Agenten. mapStore.ts hebt Selektion und Verbindungsvorgang zusätzlich bei
-// deleteFeature, renameFeatureId und loadMap auf (F-03, Abschnitt „Fachregeln").
+// deleteFeature, renameFeatureId, loadMap und resetMap auf (F-03, Abschnitt „Fachregeln";
+// resetMap seit F-23, Abschnitt "Umfang", FR-75).
 //
 // F-16-Ergänzung (connectTarget, cancelConnection, handleEscape): "Als Start verwenden" setzt
 // weiterhin unverändert direkt connectSource.set(id) (so bereits in DetailCartouche.svelte aus

@@ -92,7 +92,7 @@
 		</button>
 	{/if}
 	<span class="r">
-		{#if course}<span class="course-label">Kurs: </span>{/if}<span data-testid="status-course"
+		{#if course}<span class="course-label">Kurs:&nbsp;</span>{/if}<span data-testid="status-course"
 			>{course}</span
 		>
 	</span>

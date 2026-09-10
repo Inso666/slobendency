@@ -50,9 +50,17 @@ export function loadMap(next: FeatureMap): void {
 	clearSelection();
 }
 
-/** Leert die Karte. */
+/**
+ * Leert die Karte (F-23, FR-75: "Karte zurücksetzen") und hebt Selektion sowie einen laufenden
+ * Verbindungsvorgang auf — wie bereits loadMap() (F-03, Abschnitt „Fachregeln"): kein Feature
+ * der Karte überlebt einen Reset, also darf auch keine Selektion oder ein Verbindungsvorgang auf
+ * eines von ihnen stehen bleiben (sonst zeigte z. B. die Fußleiste (F-23) im Kurs-Feld die rohe
+ * Kennung eines bereits gelöschten Features an, statt leer zu bleiben).
+ */
 export function resetMap(): void {
 	store.set(emptyMap());
+	clearSelection();
+	connectTarget.set(null);
 }
 
 /** Legt ein Feature an (INT-01, INT-07, Feldregeln aus src/lib/model/validation.ts). */
