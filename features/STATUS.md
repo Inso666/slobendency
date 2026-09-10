@@ -28,7 +28,7 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-20 | SVG-Export | in Arbeit | feature/F-20-export-svg | 16 Unit- und 14 E2E-Tests rot committet (1dfe206) |
 | F-21 | PNG-Export | offen | — | wartet auf F-20 |
 | F-22 | Responsives Verhalten und Touch | offen | — | wartet auf F-13–F-16 (fertig), noch nicht beauftragt |
-| F-23 | Fußleiste, Hinweise, Zurücksetzen | in Arbeit | feature/F-23-statuszeile | 22 Unit- und 15 E2E-Tests rot committet (a45fc14) |
+| F-23 | Fußleiste, Hinweise, Zurücksetzen | in QA | feature/F-23-statuszeile | 478 Unit- und 221 E2E-Tests grün (56d86a3) |
 
 ## Entscheidungen des Orchestrators
 
