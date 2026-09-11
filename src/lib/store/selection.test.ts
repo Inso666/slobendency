@@ -23,7 +23,9 @@ import {
 	connectTarget,
 	handleEscape,
 	highlightMode,
-	selectedId
+	highlightVisibility,
+	selectedId,
+	type HighlightVisibility
 } from './selection';
 
 describe('clearSelection', () => {
@@ -172,5 +174,74 @@ describe('handleEscape', () => {
 
 		expect(get(selectedId)).toBeNull();
 		expect(get(connectSource)).toBeNull();
+	});
+});
+
+// F-24 · Hervorhebung: Abdunkeln oder Ausblenden (features/F-24-hervorhebung-sichtbarkeit.md,
+// Abschnitt „Tests": „Unit für selection.ts: highlightVisibility kombiniert mit beiden
+// highlightMode-Werten aus F-11 (vier Kombinationen)."). PRD FR-43, FR-47.
+describe('highlightVisibility', () => {
+	// F-24-Akzeptanzkriterien: „Standardzustand ist Abdunkeln …"
+	it('startet mit „dim" (Abdunkeln) als Standardwert', () => {
+		expect(get(highlightVisibility)).toBe('dim');
+	});
+
+	// Vier Kombinationen aus highlightMode ('direct' | 'transitive', F-11) und
+	// highlightVisibility ('dim' | 'hide', F-24): FR-47 „ein weiterer, unabhängiger
+	// Umschalter … der Wechsel wirkt sofort, ohne die Selektion aufzuheben" gilt symmetrisch —
+	// auch clearSelection() (Aufheben der Selektion) darf highlightVisibility nicht
+	// zurücksetzen, genau wie es highlightMode bereits nicht tut (siehe describe('clearSelection')
+	// oben, „lässt highlightMode unverändert").
+	const kombinationen: Array<{ mode: 'direct' | 'transitive'; visibility: HighlightVisibility }> = [
+		{ mode: 'direct', visibility: 'dim' },
+		{ mode: 'direct', visibility: 'hide' },
+		{ mode: 'transitive', visibility: 'dim' },
+		{ mode: 'transitive', visibility: 'hide' }
+	];
+
+	for (const { mode, visibility } of kombinationen) {
+		it(`bleibt bei highlightMode="${mode}" und highlightVisibility="${visibility}" nach clearSelection() in beiden Umschaltern unverändert`, () => {
+			selectedId.set('a');
+			connectSource.set('a');
+			highlightMode.set(mode);
+			highlightVisibility.set(visibility);
+
+			clearSelection();
+
+			expect(get(selectedId)).toBeNull();
+			expect(get(highlightMode)).toBe(mode);
+			expect(get(highlightVisibility)).toBe(visibility);
+		});
+	}
+
+	// Dieselbe Zusicherung für die zweite ESC-Stufe (handleEscape() im Zustand "leer", FR-46) —
+	// mit "hide" statt des in describe('handleEscape') bereits geprüften Standardwerts.
+	it('bleibt bei highlightVisibility="hide" nach handleEscape() im Zustand "leer" unverändert', () => {
+		selectedId.set('a');
+		connectSource.set(null);
+		connectTarget.set(null);
+		highlightVisibility.set('hide');
+
+		handleEscape();
+
+		expect(get(selectedId)).toBeNull();
+		expect(get(highlightVisibility)).toBe('hide');
+	});
+
+	// FR-47: „ein weiterer, unabhängiger Umschalter" — Setzen des einen Umschalters darf den
+	// jeweils anderen nicht verändern.
+	it('bleibt von Änderungen an highlightMode unberührt und umgekehrt', () => {
+		highlightMode.set('direct');
+		highlightVisibility.set('dim');
+		expect(get(highlightMode)).toBe('direct');
+		expect(get(highlightVisibility)).toBe('dim');
+
+		highlightVisibility.set('hide');
+		expect(get(highlightMode)).toBe('direct');
+		expect(get(highlightVisibility)).toBe('hide');
+
+		highlightMode.set('transitive');
+		expect(get(highlightMode)).toBe('transitive');
+		expect(get(highlightVisibility)).toBe('hide');
 	});
 });

@@ -31,6 +31,18 @@ export const selectedId: Writable<FeatureId | null> = writable(null);
  * requires-Vorbedingungen (PRD FR-41, FR-42, FR-44). Startwert 'transitive'. */
 export const highlightMode: Writable<'direct' | 'transitive'> = writable('transitive');
 
+/**
+ * F-24 · Hervorhebung: Abdunkeln oder Ausblenden (features/F-24-hervorhebung-sichtbarkeit.md,
+ * Abschnitt „Umfang"; PRD FR-43, FR-47). Sichtbarkeit nicht beteiligter Elemente bei aktiver
+ * Hervorhebung: abgedunkelt (Klasse `.dim`, Standard) oder vollständig ausgeblendet. Wie
+ * highlightMode ein reiner, dauerhafter Anzeige-Umschalter ohne eigene Fachlogik — unabhängig
+ * von selectedId und highlightMode (FR-47: „ein weiterer, unabhängiger Umschalter"), von
+ * clearSelection() und handleEscape() unberührt. Startwert 'dim' (F-24-Akzeptanzkriterien:
+ * „Standardzustand ist Abdunkeln").
+ */
+export type HighlightVisibility = 'dim' | 'hide';
+export const highlightVisibility: Writable<HighlightVisibility> = writable('dim');
+
 /** Startfeature eines laufenden Verbindungsvorgangs (PRD FR-11 bis FR-14), oder null ohne
  * laufenden Vorgang. */
 export const connectSource: Writable<FeatureId | null> = writable(null);
