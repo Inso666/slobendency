@@ -30,7 +30,7 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-22 | Responsives Verhalten und Touch | fertig | — | gemergt 11.09. 14:31 |
 | F-23 | Fußleiste, Hinweise, Zurücksetzen | fertig | — | gemergt 10.09. 18:12 |
 | F-24 | Hervorhebung: Abdunkeln oder Ausblenden | fertig | — | gemergt 11.09. 19:30 |
-| F-25 | Datenzoom (ersetzt Zoom-Mechanik F-12) | in Tests | feature/F-25-datenzoom | Test-Agent schreibt; teilt scales.ts mit F-26, läuft davor |
+| F-25 | Datenzoom (ersetzt Zoom-Mechanik F-12) | in Arbeit | feature/F-25-datenzoom | 32 Unit- (14+18 durch Signaturänderung mit-rot) und 18 E2E-Tests rot committet (b093332) |
 | F-26 | Schätzmodus: Fibonacci oder freier Wertebereich | offen | — | PRD 1.1, 11.09.; hängt an F-25 |
 
 ## Entscheidungen des Orchestrators
@@ -259,6 +259,35 @@ durch FR-46 tatsächlich verlangte Verhalten umgestellt — der Klick löscht di
 (`feature-halo-a` danach nicht mehr sichtbar, ebenso weiterhin kein Halo für X). Die eigentliche
 Prüfabsicht des Tests (X ist nicht anklickbar) bleibt unverändert. Der QA-Agent für F-24 setzt
 das um.
+
+**F-25 ersetzt die Skalen-Signatur und die gesamte F-12-Zoom-Mechanik — Testfolgen freigegeben
+(11.09.).** `features/F-25-datenzoom.md` legt ausdrücklich fest, dass `xOf`/`yOf`/`ticksOf` aus
+F-08 künftig ein Fenster (`windowMin`, `windowMax`) statt eines festen `domainMax` annehmen, und
+dass F-25 „die Struktur aus F-12 vollständig ersetzt". Das ist keine vom Test-Agenten gefundene
+Testschwäche, sondern eine in der Featurebeschreibung selbst angelegte, bewusste Ablösung —
+analog zur bereits am 05.09. entschiedenen Verengung der Kennungsprüfung aus F-02 im Rahmen von
+F-05. Der Test-Agent für F-25 hat gemeldet, dass dadurch zwangsläufig rot werden: alle Aufrufer
+der alten Zweiparameter-Signatur (`src/lib/layout/scales.test.ts`, Block `regionRects`, aus F-08;
+`src/lib/layout/jitter.test.ts`, aus F-09, weil `placeFeatures()` intern `xOf`/`yOf` aufruft) sowie
+die komplette alte F-12-Zoom/Pan-Testfläche (`src/lib/store/viewport.test.ts`,
+`e2e/F-12-zoom-pan.spec.ts`), deren API mit `viewport.ts` vollständig entfällt. Freigegeben für
+den Feature-Agenten:
+
+1. `src/lib/layout/scales.test.ts` (Block `regionRects`) und `src/lib/layout/jitter.test.ts`:
+   Aufrufe auf die neue Fenster-Signatur umstellen (rein mechanisch, z. B.
+   `xOf(wert, 0, domainMax)` für den bisherigen Vollansicht-Fall) — geprüfte Werte und
+   Invarianten bleiben unverändert.
+2. `src/lib/store/viewport.test.ts` und `e2e/F-12-zoom-pan.spec.ts`: werden gelöscht, nicht
+   nachgebildet. Die neu vorgelegten `src/lib/store/viewport.datenzoom.test.ts` (14 Fälle) und
+   `e2e/F-25-datenzoom.spec.ts` (18 Fälle, je F-25-AK mindestens ein Test) sind die alleinige,
+   bereits vollständige Testabdeckung der jetzt einzigen Zoom/Pan-Mechanik. Ein Akzeptanzkriterium
+   aus F-12 existiert nach der Ablösung nicht mehr eigenständig fort (die alte Bildskalierung ist
+   per Featurebeschreibung nicht mehr Teil des Systems).
+
+Alle übrigen Aufrufstellen von `viewport.ts` (`MapCanvas.svelte`, `FeatureNodes.svelte`,
+`ContextMenu.svelte`, `FeatureList.svelte`, `ImportDialog.svelte`, `+page.svelte`, `hitArea.ts`)
+sind auf die neue API umzustellen — das ist reguläre Umsetzungsarbeit des Feature-Agenten, keine
+Testfrage.
 
 ## Sessionprotokoll
 
