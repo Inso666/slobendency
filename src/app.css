@@ -294,4 +294,20 @@ button {
 		justify-content: flex-end;
 		row-gap: 6px;
 	}
+	/* F-22, Abschnitt „Umfang", Zeile „Fußleiste": „Nur Speicherzustand und Bestandszahlen; der
+	   Kurs entfällt." StatusBar.svelte rendert den Kurs unverändert in .foot .r — hier nur
+	   ausgeblendet, keine zweite Fachregel (features/README.md, Leitplanke 3). */
+	.foot .r {
+		display: none;
+	}
+	/* F-22, Abschnitt „Umfang", Zeile „Verzeichnis" (UI-11): Das Verzeichnis-Vollbild
+	   (FeatureList.svelte, `.index`, `position: fixed; z-index: 20`) deckt bei geöffnetem
+	   Zustand das gesamte Fenster ab, auch das Kopfband. Der Kopfband-Knopf "Verzeichnis" bleibt
+	   trotzdem sichtbar über dem Overlay — dieselbe Bedienhandlung öffnet und schließt (üblich
+	   für ein Vollbild-Overlay auf Mobilgeräten), statt eine zweite, redundante Schließen-Aktion
+	   danebenzustellen. */
+	.dir-toggle {
+		position: relative;
+		z-index: 21;
+	}
 }

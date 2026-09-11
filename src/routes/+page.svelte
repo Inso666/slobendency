@@ -123,6 +123,17 @@
 		viewMenuOpen = false;
 	}
 
+	// F-22 · Responsives Verhalten und Touch (features/F-22-responsiv.md, Abschnitt „Umfang",
+	// Zeile „Zeichenerklärung"): „Ausgeblendet, erreichbar über Ansicht → Zeichenerklärung."
+	// Derselbe Menü-Mechanismus wie „Ganze Karte zeigen" oben, kein zweiter Menü-Aufbau
+	// (features/README.md, Leitplanke 3).
+	let legendForced = $state(false);
+
+	function toggleLegendForced(): void {
+		legendForced = !legendForced;
+		viewMenuOpen = false;
+	}
+
 	// F-23 · „Karte zurücksetzen" (FR-75): Rückfrage im selben Muster wie die Löschrückfrage aus
 	// F-14/F-15 (features/STATUS.md, Entscheidung vom 06.09. zu FR-05) — `role="alertdialog"`,
 	// Name „Karte zurücksetzen", Knöpfe „Zurücksetzen"/„Abbrechen", als Kartusche über die Token
@@ -378,7 +389,7 @@
 			<button type="button" class="btn" onclick={openImportDialog}>Importieren</button>
 			<button
 				type="button"
-				class="btn"
+				class="btn dir-toggle"
 				aria-pressed={directoryOpen}
 				onclick={toggleDirectory}
 			>
@@ -398,6 +409,11 @@
 					<div class="view-menu-panel cartouche">
 						<button type="button" onclick={showWholeMap}> Ganze Karte zeigen </button>
 						<button type="button" onclick={openResetConfirm}>Karte zurücksetzen</button>
+						<!-- F-22, Abschnitt „Umfang", Zeile „Zeichenerklärung": unter 1080 px
+							ausgeblendet, hierüber erreichbar. -->
+						<button type="button" aria-pressed={legendForced} onclick={toggleLegendForced}>
+							Zeichenerklärung
+						</button>
 					</div>
 				{/if}
 			</div>
@@ -519,7 +535,7 @@
 
 	<main class="chart">
 		<NoticeBar />
-		<MapCanvas map={$map} {domainMax} onContextMenu={openContextMenu} />
+		<MapCanvas map={$map} {domainMax} {legendForced} onContextMenu={openContextMenu} />
 		{#if $selectedFeature}
 			<DetailCartouche
 				map={$map}
