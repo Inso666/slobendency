@@ -31,7 +31,7 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-23 | Fußleiste, Hinweise, Zurücksetzen | fertig | — | gemergt 10.09. 18:12 |
 | F-24 | Hervorhebung: Abdunkeln oder Ausblenden | fertig | — | gemergt 11.09. 19:30 |
 | F-25 | Datenzoom (ersetzt Zoom-Mechanik F-12) | fertig | — | gemergt 12.09. 00:09 |
-| F-26 | Schätzmodus: Fibonacci oder freier Wertebereich | in Tests | feature/F-26-schaetzmodus | Test-Agent schreibt |
+| F-26 | Schätzmodus: Fibonacci oder freier Wertebereich | in Arbeit | feature/F-26-schaetzmodus | 32 Unit- und 12 E2E-Tests rot committet (0407df7) |
 
 ## Entscheidungen des Orchestrators
 
@@ -318,6 +318,18 @@ Quellwiderspruch:
 
 Der QA-Agent für F-25 setzt beide Korrekturen mechanisch um (keine neue Prüfabsicht) und prüft
 danach die volle Suite erneut.
+
+**Barrierefreier Kontrakt des Einstellungsdialogs, F-26 (11.09.).** Weder `features/F-26-schaetzmodus.md`
+noch `design/03-seekarte.html` legen die Rolle/Beschriftung des Einstellungsdialogs pixelgenau
+fest (wie schon bei F-13s Bearbeiten-Knopf und F-18/F-16s Vorschau-/Beziehungsdialogen laut
+`design/README.md` vermerkt). Der Test-Agent für F-26 hat einen Kontrakt entworfen und dagegen
+getestet. Festgelegt, analog zum F-13-Präzedenzfall: Menüpfad **Ansicht ▾ → Einstellungen**
+(PRD 6.1), Dialog mit Namen *Einstellungen*, darin eine Gruppe *Schätzmodus* mit den Knöpfen
+*Fibonacci*/*Frei* (gleiche Bauart wie die Umschalter aus F-11/F-24), bei „Frei" Textfelder mit
+den Beschriftungen *Minimum*/*Maximum* sowie Zahlenfelder *Nutzen*/*Aufwand* im Formular
+(`getByRole('spinbutton', { name: 'Nutzen' | 'Aufwand' })`), als Kartusche über die Token aus
+`app.css` wie das Feature-Formular aus F-13. Feature- und QA-Agent bauen/prüfen gegen diesen
+Kontrakt.
 
 ## Sessionprotokoll
 
