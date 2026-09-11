@@ -29,6 +29,9 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-21 | PNG-Export | fertig | — | gemergt 10.09. 23:15 |
 | F-22 | Responsives Verhalten und Touch | fertig | — | gemergt 11.09. 14:31 |
 | F-23 | Fußleiste, Hinweise, Zurücksetzen | fertig | — | gemergt 10.09. 18:12 |
+| F-24 | Hervorhebung: Abdunkeln oder Ausblenden | offen | — | PRD 1.1, 11.09. |
+| F-25 | Datenzoom (ersetzt Zoom-Mechanik F-12) | offen | — | PRD 1.1, 11.09.; teilt scales.ts mit F-26, läuft davor |
+| F-26 | Schätzmodus: Fibonacci oder freier Wertebereich | offen | — | PRD 1.1, 11.09.; hängt an F-25 |
 
 ## Entscheidungen des Orchestrators
 
@@ -223,6 +226,25 @@ Bildrand, wie vom Test-Agenten für F-21 geprüft). Wie das erreicht wird — et
 kein Lösungsweg, den der Orchestrator vorgibt, sondern eine Klarstellung, welche der beiden Quellen
 bei einem echten Widerspruch gilt.
 
+**PRD 1.1 — drei Erweiterungen aus Nutzergespräch (11.09.).** Der Nutzer hat direkt drei
+Änderungen benannt: Ausblenden statt Abdunkeln bei Selektion, Datenzoom statt Bildskalierung
+beim Zoomen, freier Schätzmodus als Alternative zu Fibonacci. Per Rückfrage geklärt: Dimming
+bleibt als Standard erhalten, Ausblenden ist ein zusätzlicher Umschalter (nicht ersetzend);
+Zoom wird als echter Datenzoom umgesetzt (Achsen berechnen sich neu, Punkt-/Schriftgrößen
+bleiben bildschirmkonstant, damit entfällt die bisherige Mindestschriftgröße aus F-12); der
+Schätzmodus ist eine App-Einstellung wie die Tafel (nicht Teil der Karte/des DSL-Exports) und
+schaltet bei Import eines Fibonacci-fremden Werts automatisch auf Frei um; ein Wertebereich
+gilt gemeinsam für Nutzen und Aufwand, Standard 0–100. Ohne Rückfrage entschieden (technische
+Details ohne fachliche Tragweite): Teilstriche werden im gezoomten Zustand und im freien
+Schätzmodus generisch als runde, gleichmäßig verteilte Werte erzeugt statt der Fibonacci-Reihe
+(die wäre in einem beliebigen Fenster zu lückenhaft); ein Wert außerhalb des eingestellten
+freien Bereichs wird wie ein Fibonacci-fremder Wert behandelt (erhalten, gekennzeichnet), statt
+den Bereich automatisch zu erweitern; Einstellungen und der neue Sichtbarkeits-Umschalter
+hängen am bestehenden Menü **Ansicht ▾** statt einer neuen Symbolleisten-Schaltfläche. Ergebnis:
+PRD auf Version 1.1, drei neue Feature-Dateien F-24 bis F-26 (siehe Abhängigkeitstabelle in
+`features/README.md`). F-25 und F-26 teilen sich `src/lib/layout/scales.ts` und laufen deshalb
+nacheinander.
+
 ## Sessionprotokoll
 
 Je Session eine Zeile: Datum, geweckt oder manuell gestartet, was erledigt wurde, womit die
@@ -235,3 +257,4 @@ nächste Session anfängt.
 | 06.09. (Fortsetzung, geweckt 20:47) | geweckt | F-14 und F-15 vollständig durch Umsetzung, QA und Merge nach main gebracht (F-15-QA behob zusätzlich eine Typografie-Abweichung in der Kartusche). Rebase-Konflikt zwischen beiden Features in src/routes/+page.svelte aufgelöst (Verzeichnis-Panel und Detail-Kartusche bestehen nebeneinander). Gesamtsuite auf main: 427/427 Unit-, 141/141 E2E-Tests grün. | F-16 (Kontextmenü und Verbindungsvorgang) durch Tests, Umsetzung und QA bringen; dabei den nachzuholenden Test für Escape (FR-13) aus der F-16-Anmerkung berücksichtigen. |
 | 07.09. (Fortsetzung, geweckt 01:47) | geweckt | F-16 fertiggestellt (ein Ratenlimit-Abbruch mittendrin, von frischem Feature-Agent fortgesetzt) und nach QA (ein Testbefund behoben: fehlender Hover vor Labelprüfung, FR-45) nach main gemergt. Ein interner Widerspruch im F-16-Dokument selbst entschieden (Zyklus-Warnung AK-08 gehört zu F-23). F-17 vollständig durch Tests, Umsetzung, QA (INT-04-Prüfung auf eine Stelle konsolidiert) und Merge gebracht. Gesamtsuite auf main: 438/438 Unit-, 180/180 E2E-Tests grün (ein vorbestehender F-12-Performance-Test bleibt unter voller Parallelisierung gelegentlich flaky, unabhängig von jedem Feature — mit --workers=1 zuverlässig grün). | F-18 (Import-Dialog) durch Tests, Umsetzung und QA bringen. |
 | 11.09. | manuell | Angetroffen: F-22 stand „in Arbeit" mit rot committeten Tests (c23b468) und einem unfertigen, nicht committeten Umsetzungsversuch in einem verwaisten Worktree. Frischer Feature-Agent hat diesen Stand geprüft und das Feature fertiggestellt (523/523 Unit grün). Der Feature-Agent meldete drei fehlerhafte Zusicherungen in `e2e/F-22-responsiv.spec.ts` (Jitter-Kollision durch gleiche Lotungswerte, Wortsuche „requires" statt Pfeil `-->`, ungültiges DSL-Importdokument) — geprüft, bestätigt (kein Quellwiderspruch), freigegeben und vom QA-Agenten mechanisch korrigiert. QA-Agent fand und behob zusätzlich zwei echte Abweichungen (UI-17: Kopfband unter 768 px zeigte Wortlaut statt Icons; UI-16: 44×44-px-Mindestgröße galt nicht für alle Bedienelemente). Gesamtsuite nach Rebase auf main: 523/523 Unit-, 258/258 E2E-Tests grün. F-22 nach main gemergt. **Damit sind alle 23 Features (F-01–F-23) fertig — der MVP ist laut `features/README.md` vollständig.** | Kein offenes Feature mehr. Nächste Session: Gesamtsuite auf main gegenprüfen, ggf. Nutzer nach weiterem Umfang fragen, sonst Weckzyklus beenden. |
+| 11.09. (Fortsetzung, manuell) | manuell | Nutzer wollte weiteren Umfang: iterativ befragt zu drei Änderungswünschen (Ausblenden statt Abdunkeln bei Selektion, Datenzoom statt Bildskalierung, freier Schätzmodus neben Fibonacci). PRD auf Version 1.1 gehoben (FR-08, FR-09, FR-43 geändert, FR-47, FR-76 neu, FR-25/FR-26 geändert, AK-17 bis AK-19, Datenzoom-Formel in 7.3, Änderungshistorie in 1.5). Drei neue Feature-Dateien angelegt: F-24 (Hervorhebung Abdunkeln/Ausblenden), F-25 (Datenzoom, ersetzt F-12-Mechanik), F-26 (Schätzmodus Fibonacci/Frei, hängt an F-25 wegen gemeinsamer scales.ts). `features/README.md` um Abhängigkeitszeilen und Sprachtabelle ergänzt. Noch **kein** Test-Agent gestartet — wartet auf Rückmeldung des Nutzers zu den Entwürfen. | Nutzerfreigabe der drei neuen Feature-Dateien einholen, dann F-24 als ersten Branch (unabhängig von F-25/F-26) durch Tests, Umsetzung und QA bringen; F-25 vor F-26, da beide `scales.ts` teilen. |

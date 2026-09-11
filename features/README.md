@@ -69,6 +69,10 @@ sonst anders.
 | Zeichenerklärung | `legend` | Legende der Signaturen. |
 | Tafel | `theme` | Farbtafel `light` (Tag) / `dark` (Nacht). |
 | Signatur | — | Zeichenform eines Elements auf der Karte (Linienart, Endmarke, Ring). |
+| Hervorhebungssichtbarkeit | `HighlightVisibility` | `'dim' \| 'hide'` — wie nicht beteiligte Elemente bei Selektion dargestellt werden (F-24). |
+| Sichtbarer Ausschnitt | `Viewport` | `{ centerEffort, centerImpact, visibleRange }` — der aktuell gezoomte Wertebereich (Datenzoom, F-25). Ersetzt die reine Bildtransformation aus F-12. |
+| Schätzmodus | `EstimationMode` | `'fibonacci' \| 'free'` — bestimmt, wie Nutzen/Aufwand im Formular erfasst werden (F-26). App-Einstellung, nicht Teil der Karte. |
+| Freier Wertebereich | `EstimationRange` | `{ min, max }`, gemeinsam für Nutzen und Aufwand im Schätzmodus `free` (F-26). |
 
 ## Zwei Präzisierungen gegenüber den Quellen
 
@@ -113,9 +117,17 @@ entschieden, damit kein Agent sie erneut auslegen muss:
 | [F-21](F-21-export-png.md) | PNG-Export | Austausch | F-20 |
 | [F-22](F-22-responsiv.md) | Responsives Verhalten und Touch | Bedienung | F-13 bis F-16 |
 | [F-23](F-23-statuszeile.md) | Fußleiste, Hinweise, Zurücksetzen | Bedienung | F-04, F-07 |
+| [F-24](F-24-hervorhebung-sichtbarkeit.md) | Hervorhebung: Abdunkeln oder Ausblenden | Darstellung | F-11 |
+| [F-25](F-25-datenzoom.md) | Datenzoom (ersetzt Zoom-Mechanik aus F-12) | Darstellung | F-08, F-12 |
+| [F-26](F-26-schaetzmodus.md) | Schätzmodus: Fibonacci oder freier Wertebereich | Anwendung/Bedienung/Darstellung | F-08, F-13, F-25 |
 
 Nach F-04 ist die Karte haltbar, nach F-11 ist der Kernnutzen erreicht, nach F-21 ist sie
-teilbar, nach F-23 ist der MVP vollständig.
+teilbar, nach F-23 ist der MVP vollständig. F-24 bis F-26 (PRD 1.1) erweitern den MVP um
+Ausblenden bei Selektion, Datenzoom und einen freien Schätzmodus.
+
+**Gemeinsame Dateien F-25/F-26:** Beide Features ändern `src/lib/layout/scales.ts`
+(`ticksOf`/`domainMaxOf`) und laufen deshalb **nacheinander**, nicht parallel — analog zur
+Regel für F-05/F-06.
 
 ## Fertigstellungskriterium je Feature
 
