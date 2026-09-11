@@ -6,7 +6,9 @@
 	die reinen Funktionen aus listing.ts; das Revier je Feature kommt unverändert aus
 	quadrantOf() (F-02) und wird hier nicht neu berechnet (Abschnitt "DDD-Einordnung"). Ein Klick
 	auf einen Eintrag selektiert das Feature (src/lib/store/selection.ts) und zentriert es
-	(centerOn, src/lib/store/viewport.ts, F-12) — FR-54. Löschen ruft deleteFeature
+	(centerOn, src/lib/store/viewport.ts, F-25 — ersetzt die F-12-Zoom-Mechanik vollständig,
+	centerOn() nimmt seit F-25 den Wertepunkt effort/impact entgegen, nicht mehr eine
+	Bildschirm-/PLOT-Position) — FR-54. Löschen ruft deleteFeature
 	(src/lib/store/mapStore.ts) auf; bestehen Beziehungen, fragt es vorher zurück und nennt ihre
 	Zahl (FR-05). "Beziehung anlegen" setzt das Feature als Start eines Verbindungsvorgangs
 	(connectSource, src/lib/store/selection.ts) und schließt das Panel — der Verbindungsvorgang
@@ -53,7 +55,6 @@
 	import { connectSource, selectedId } from '../../store/selection';
 	import { centerOn } from '../../store/viewport';
 	import { domainMaxOf } from '../../layout/scales';
-	import { placeFeatures } from '../../layout/jitter';
 	import {
 		displayNameOf,
 		filterFeatures,
@@ -108,12 +109,13 @@
 	);
 
 	/** FR-54: Klick auf einen Eintrag selektiert das Feature auf der Karte und rückt es in die
-	 * Mitte des Ausschnitts. Zentriert wird auf den tatsächlich gezeichneten Punkt aus
-	 * placeFeatures() (F-09), nicht auf den unversetzten Ankerpunkt. */
+	 * Mitte des Ausschnitts. centerOn() (F-25) nimmt den Wertepunkt effort/impact des Features
+	 * selbst entgegen — der Jitter-Versatz aus placeFeatures() (F-09) ist ein rein visueller,
+	 * bildschirmkonstanter Nudge (F-25, Abschnitt „Verhalten") und kein Wertepunkt. */
 	function selectRow(id: FeatureId): void {
 		selectedId.set(id);
-		const placement = placeFeatures($map, domainMax).find((candidate) => candidate.id === id);
-		if (placement) centerOn(placement.x, placement.y);
+		const feature = $map.features.find((candidate) => candidate.id === id);
+		if (feature) centerOn(feature.effort, feature.impact);
 	}
 
 	/** FR-55/FR-04: Das Formular gehört F-13; das Verzeichnis selektiert nur und meldet den

@@ -6,13 +6,28 @@
 	Achsentitel EFFORT/IMPACT. Positionen der Achsentitel und der x-Teilstrichzeile sind fix
 	(design/03-seekarte.html), weil PLOT selbst nicht mit domainMax skaliert — nur die
 	Teilstrichwerte auf den Achsen tun das (xOf/yOf).
+
+	F-25 · Datenzoom (features/F-25-datenzoom.md, Abschnitt „Umfang"): liest das sichtbare
+	Fenster aus src/lib/store/viewport.ts (über den Aufrufer, MapCanvas.svelte) statt eines
+	festen [0, domainMax] und rendert bei jeder Änderung neu. effortMin/effortMax und
+	impactMin/impactMax sind getrennt, weil centerEffort/centerImpact unabhängig voneinander
+	verschoben sein können — x- und y-Teilstriche werden deshalb je Achse eigenständig berechnet.
+	Solange effortMin = 0 bzw. impactMin = 0 (Vollansicht), liefert ticksOf weiterhin die
+	Fibonacci-Reihe aus F-08; sonst runde, gleichmäßig verteilte Teilstriche im sichtbaren
+	Fenster (F-25-AK).
 -->
 <script lang="ts">
 	import { PLOT, ticksOf, xOf, yOf } from '../../layout/scales';
 
-	let { domainMax }: { domainMax: number } = $props();
+	let {
+		effortMin,
+		effortMax,
+		impactMin,
+		impactMax
+	}: { effortMin: number; effortMax: number; impactMin: number; impactMax: number } = $props();
 
-	let ticks = $derived(ticksOf(domainMax));
+	let xTicks = $derived(ticksOf(effortMin, effortMax));
+	let yTicks = $derived(ticksOf(impactMin, impactMax));
 
 	const AXIS_MID_X = (PLOT.left + PLOT.right) / 2;
 	const AXIS_MID_Y = (PLOT.top + PLOT.bottom) / 2;
@@ -32,23 +47,23 @@
 	height={PLOT.bottom - PLOT.top}
 />
 
-{#each ticks as value (`x-${value}`)}
+{#each xTicks as value (`x-${value}`)}
 	<text
 		class="tick-lbl"
 		data-testid="tick-x-{value}"
-		x={xOf(value, domainMax)}
+		x={xOf(value, effortMin, effortMax)}
 		y={TICK_X_ROW_Y}
 		text-anchor="middle"
 	>
 		{value}
 	</text>
 {/each}
-{#each ticks as value (`y-${value}`)}
+{#each yTicks as value (`y-${value}`)}
 	<text
 		class="tick-lbl"
 		data-testid="tick-y-{value}"
 		x={TICK_Y_COLUMN_X}
-		y={yOf(value, domainMax) + TICK_Y_BASELINE_OFFSET}
+		y={yOf(value, impactMin, impactMax) + TICK_Y_BASELINE_OFFSET}
 		text-anchor="end"
 	>
 		{value}
