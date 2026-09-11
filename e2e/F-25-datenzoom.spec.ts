@@ -356,6 +356,10 @@ test.describe('F-25 · Datenzoom', () => {
 	}) => {
 		await seedMap(page, ZWEI_FEATURES);
 		await page.goto('/');
+		// Wartet auf den vollständigen Google-Fonts-Ladevorgang, damit die Vorher-Messung nicht
+		// auf einer Fallback-Schriftart beruht, während die Nachher-Messung bereits die geladene
+		// Schrift sieht (sonst schwankt labelAfter!.height unabhängig vom Zoom).
+		await page.waitForFunction(() => document.fonts.status === 'loaded');
 
 		const nodeBefore = await page.getByTestId('feature-node-a').boundingBox();
 		const labelBefore = await page.getByTestId('feature-label-a').boundingBox();

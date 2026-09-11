@@ -319,12 +319,16 @@ test.describe('F-14 · Verzeichnis', () => {
 
 		await expect(page.getByTestId('feature-halo-ziel')).toBeVisible();
 
-		const mapBox = await page.getByRole('img', { name: /Streudiagramm/ }).boundingBox();
+		// Gemessen wird die Mitte der Plotfläche (`.frame`, data-testid="map-frame", F-08:
+		// PLOT 80–960 × 40–620), nicht die Mitte der gesamten VIEWBOX (0–1000 × 0–700) — beide
+		// Rahmen liegen unterschiedlich mittig, weil VIEWBOX auch Achsenbeschriftung und Rand
+		// umfasst.
+		const plotBox = await page.getByTestId('map-frame').boundingBox();
 		const nodeBox = await page.getByTestId('feature-node-ziel').boundingBox();
-		expect(mapBox, 'Kartenfläche sollte eine sichtbare Bounding Box haben').not.toBeNull();
+		expect(plotBox, 'Plotfläche sollte eine sichtbare Bounding Box haben').not.toBeNull();
 		expect(nodeBox, 'Feature-Signatur sollte eine sichtbare Bounding Box haben').not.toBeNull();
 
-		const abstand = distance(centerOf(mapBox!), centerOf(nodeBox!));
+		const abstand = distance(centerOf(plotBox!), centerOf(nodeBox!));
 		expect(abstand, 'Feature sollte nach der Zentrierung nahe der Bildschirmmitte liegen').toBeLessThan(
 			10
 		);
