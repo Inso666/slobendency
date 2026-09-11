@@ -27,7 +27,7 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-19 | Export-Dialog | fertig | — | gemergt 08.09. 23:16 |
 | F-20 | SVG-Export | fertig | — | gemergt 10.09. 18:23 |
 | F-21 | PNG-Export | fertig | — | gemergt 10.09. 23:15 |
-| F-22 | Responsives Verhalten und Touch | in Arbeit | feature/F-22-responsiv | 13 Unit- und 10 E2E-Tests rot committet (c23b468) |
+| F-22 | Responsives Verhalten und Touch | in QA | feature/F-22-responsiv | 523/523 Unit grün; 3 Testfehler in E2E gefunden und freigegeben, QA-Agent behebt |
 | F-23 | Fußleiste, Hinweise, Zurücksetzen | fertig | — | gemergt 10.09. 18:12 |
 
 ## Entscheidungen des Orchestrators
@@ -180,6 +180,33 @@ schlicht nicht berücksichtigt. Festgelegt: Der Test bekommt vor der Sichtbarkei
 Hover auf die neue Kante (oder eine Selektion des beteiligten Features), wie im etablierten
 Muster aus F-10/F-11. Prüfabsicht (Beschriftung wird unverändert übernommen) und Erwartungswert
 bleiben unverändert. Der QA-Agent für F-16 setzt das um.
+
+**Drei Testfehler in `e2e/F-22-responsiv.spec.ts` (11.09.).** Der Feature-Agent für F-22 hat drei
+Zusicherungen als fehlerhaft gemeldet, ohne sie zu ändern. Geprüft und bestätigt, kein
+Quellwiderspruch, sondern jeweils ein Versehen im Test selbst:
+
+1. Test „führt bei …px Anlegen → Beziehung → Export vollständig durch…": `createFeature()` setzt
+   nur den Anzeigenamen, `FeatureModal.svelte` befüllt Nutzen/Aufwand dabei mit dem Fibonacci-
+   Startwert (beide Felder 1). Feature A und Feature B erhalten damit identische Lotungswerte,
+   landen laut F-09-Jitter in derselben Gruppe und ihre deterministischen Ankerpunkte liegen für
+   genau diese Kennungen unter einem Bildschirmpixel auseinander — die Rechtsklicks im
+   Kontextmenü-Ablauf treffen dieselbe Signatur. Jeder andere E2E-Test mit mehreren Features
+   (z. B. `e2e/F-16-verbindungsvorgang.spec.ts` Zeile 118 f.) vergibt bewusst unterschiedliche
+   Werte, dieser nicht. Freigegeben: Feature A und B im Kernablauf-Test mit unterschiedlichem
+   Nutzen/Aufwand anlegen (Prüfabsicht unverändert).
+2. Derselbe Test, `expect(exportText).toContain('requires')`: PRD 4.2 (Zeilen 141, 153–155)
+   bildet die Beziehungsart „benötigt" im DSL-Text ausschließlich als Pfeil `-->` ab, das Wort
+   „requires" kommt im Export nie vor. Freigegeben: Zusicherung auf den Pfeil `-->` umstellen.
+3. Test „Bearbeiten, Löschen und Importieren bei 375 px": der eingegebene Importtext
+   `'feature neu impact=8 effort=13\n'` ist kein gültiges Dokument nach PRD 4.2 — es fehlt die
+   Kopfzeile `featuremap v1`, und `feature_def` verlangt `identifier [label] :: attributes`, nicht
+   zwei durch Leerzeichen getrennte Wörter. Der Parser weist das Dokument zu Recht ab. Freigegeben:
+   Importtext durch ein gültiges Dokument ersetzen, das dieselbe Prüfabsicht (Feature „neu" mit
+   Nutzen 8/Aufwand 13 entsteht durch Import) erfüllt, z. B. `'featuremap v1\nneu :: impact=8,
+   effort=13\n'`.
+
+Der QA-Agent für F-22 setzt alle drei Korrekturen mechanisch um (keine neue Prüfabsicht) und
+prüft danach die volle Suite erneut.
 
 **Transparenter Hintergrund im PNG-Export, F-21 vs. F-20 (10.09.).** `features/F-21-export-png.md`,
 Abschnitt „Ablauf" Schritt 4, nennt für die Option „transparent" nur, dass die Vorab-Füllung des
