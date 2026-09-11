@@ -385,15 +385,37 @@
 			<span>Blatt 1 · Impact / Effort</span>
 		</div>
 		<div class="acts">
-			<button type="button" class="btn pri" onclick={openCreateModal}>+ Feature</button>
-			<button type="button" class="btn" onclick={openImportDialog}>Importieren</button>
+			<!-- F-22, Abschnitt „Umfang", Zeile „Kopfband": „Nur Symbole, seltener Gebrauchtes im
+				Überlaufmenü" (UI-17: „Die Toolbar reduziert sich auf Icons mit Overflow-Menü").
+				Unter 768 px blendet app.css (.icon-label) den Wortlaut nur visuell aus (dieselbe
+				sr-only-Technik wie üblich: Position/Clip statt display:none), NICHT aus dem
+				Accessibility-Baum — der zugängliche Name des Knopfs bleibt deshalb exakt der
+				bisherige Wortlaut ("+ Feature", "Importieren", "Verzeichnis", "Ansicht"), .icon-label
+				enthält ihn deshalb ungekürzt; getByRole('button', { name: … }) trifft dadurch
+				unverändert, bei jeder Breite (kein zweiter, separater aria-label nötig). Das
+				dekorative Symbol (.icon) daneben ist aria-hidden, trägt also nichts zum Namen bei.
+				Das „Überlaufmenü" für seltener Gebrauchtes besteht bereits: die Menüs „Ansicht"
+				(Ganze Karte zeigen/Zurücksetzen/Zeichenerklärung) und „Exportieren" (Textformat, SVG,
+				PNG-Optionen) fassen genau die selten benötigten Aktionen zusammen, während
+				„+ Feature", „Importieren" und „Verzeichnis" als für AK-16 unmittelbar nötige
+				Kernaktionen direkt erreichbar bleiben (Icons statt Untermenü) — dieselbe Aufteilung,
+				die bereits vor F-22 bestand, jetzt nur als Icon statt als Wortlaut dargestellt. -->
+			<button type="button" class="btn pri" onclick={openCreateModal}>
+				<span class="icon" aria-hidden="true">+</span>
+				<span class="icon-label">+ Feature</span>
+			</button>
+			<button type="button" class="btn" onclick={openImportDialog}>
+				<span class="icon" aria-hidden="true">↓</span>
+				<span class="icon-label">Importieren</span>
+			</button>
 			<button
 				type="button"
 				class="btn dir-toggle"
 				aria-pressed={directoryOpen}
 				onclick={toggleDirectory}
 			>
-				Verzeichnis
+				<span class="icon" aria-hidden="true">≡</span>
+				<span class="icon-label">Verzeichnis</span>
 			</button>
 			<div class="view-menu">
 				<button
@@ -403,7 +425,8 @@
 					aria-expanded={viewMenuOpen}
 					onclick={toggleViewMenu}
 				>
-					Ansicht
+					<span class="icon" aria-hidden="true">⤢</span>
+					<span class="icon-label">Ansicht</span>
 				</button>
 				{#if viewMenuOpen}
 					<div class="view-menu-panel cartouche">
@@ -427,7 +450,10 @@
 					aria-expanded={exportMenuOpen}
 					onclick={toggleExportMenu}
 				>
-					Exportieren
+					<!-- F-22, UI-17: Icon statt Wortlaut unter 768 px, siehe Kommentar bei "+ Feature"
+						oben. -->
+					<span class="icon" aria-hidden="true">↑</span>
+					<span class="icon-label">Exportieren</span>
 				</button>
 				{#if exportMenuOpen}
 					<div class="view-menu-panel cartouche">

@@ -141,4 +141,17 @@
 		font-size: 12px;
 		color: var(--magenta);
 	}
+
+	/* F-22, Abschnitt „Trefferflächen"/UI-16: mindestens 44 × 44 px unter 768 px, wie jeder
+	   andere Knopf/jedes andere Bedienelement der Anwendung in diesem Zustand. */
+	@media (max-width: 768px) {
+		.relation-row select {
+			min-height: 44px;
+		}
+		.relation-row .remove {
+			min-height: 44px;
+			min-width: 44px;
+		}
+	}
 </style>
+
