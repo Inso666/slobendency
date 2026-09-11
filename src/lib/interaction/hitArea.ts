@@ -32,5 +32,5 @@ export const MIN_HIT_AREA_SCREEN_DIAMETER_PX = 44;
  * `MIN_HIT_AREA_SCREEN_DIAMETER_PX` fällt (F-22, Abschnitt „Trefferflächen").
  */
 export function hitAreaRadiusForScale(scale: number): number {
-	throw new Error('not implemented');
+	return MIN_HIT_AREA_SCREEN_DIAMETER_PX / 2 / scale;
 }

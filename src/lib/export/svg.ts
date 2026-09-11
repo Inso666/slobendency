@@ -203,6 +203,19 @@ export function buildExportSvg(source: SVGSVGElement, options?: ExportOptions): 
 	);
 	for (const group of topGroups) group.removeAttribute('transform');
 
+	// F-22, Abschnitt „Trefferflächen" (FeatureNodes.svelte, `.hitareas`): die unsichtbaren
+	// Trefferkreise gehören nie zum Export, genau wie `.edge-hitbox` unten — reine Bedienhilfe,
+	// kein Karteninhalt. Anders als `.edge-hitbox` (eine Linie, deren getBBox() unabhängig von
+	// ihrer unsichtbaren Strichbreite ist) ist die Trefferfläche ein Kreis mit einem eigenen,
+	// vom aktuellen Maßstab abhängigen Radius (`r`-Attribut) — bliebe sie bis zur
+	// Bounding-Box-Berechnung in Schritt 3 erhalten, führte ein Export bei anderem Maßstab zu
+	// einer anderen Bounding Box und damit zu einer anderen Datei für denselben Karteninhalt
+	// (F-21-AK „liefert bei gezoomter Karte dieselbe PNG-Datei wie bei Vollansicht"). Deshalb
+	// hier entfernt, vor der Messung, nicht erst danach wie `.edge-hitbox`.
+	for (const hitarea of Array.from(clone.querySelectorAll('.hitareas'))) {
+		hitarea.remove();
+	}
+
 	// Schritt 3: Bounding Box über alle Elemente plus Rand, unabhängig vom aktuellen Ausschnitt —
 	// getBBox() liefert je Element ohnehin dessen eigene, von seinem `transform` unabhängige
 	// Bounding Box (FR-65). Reale Browser berechnen getBBox() nur für Elemente, die (auch

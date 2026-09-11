@@ -28,6 +28,23 @@
 	dieser Komponente. Der gesetzte Startpunkt eines laufenden Verbindungsvorgangs
 	(`connectSource`, src/lib/store/selection.ts) bleibt dauerhaft markiert, solange der Vorgang
 	läuft (FR-14): eine gestrichelte Kontur in --magenta um den Signaturpunkt.
+
+	F-22 · Responsives Verhalten und Touch (features/F-22-responsiv.md, Abschnitt
+	„Trefferflächen"): Jede Feature-Signatur trägt zusätzlich einen unsichtbaren Trefferkreis
+	(`feature-hitarea-<id>`, Kind derselben `<g class="node">`, deshalb ohne eigene
+	Ereignisbehandlung an denselben Klick-/Touch-Zielen der Gruppe beteiligt) mit einem Radius aus
+	`hitAreaRadiusForScale()` (src/lib/interaction/hitArea.ts), zusätzlich durch `pxPerUnit`
+	(MapCanvas.svelte, gemessene Bildschirmgröße je Inhaltseinheit) auf die tatsächlich
+	gerenderte Größe der äußeren `<svg>` umgerechnet, damit er bei jedem Breakpoint und jedem
+	Maßstab mindestens 44 px Bildschirmgröße erreicht (UI-16) — ein kleiner Sicherheitsaufschlag
+	fängt Rundungsfehler der CTM-Messung ab. Bewegt sich ein laufender Long-Press-Druck um mehr
+	als `LONG_PRESS_DRAG_THRESHOLD_PX` (`exceedsLongPressDragThreshold()`,
+	src/lib/interaction/longPress.ts), bricht der Timer ab und die Bewegung verschiebt
+	stattdessen die Karte (`panBy`, src/lib/store/viewport.ts) — über dieselbe
+	Bildschirm-zu-Inhaltsraum-Umrechnung (`toContentPoint`, als Prop von MapCanvas.svelte
+	durchgereicht), die MapCanvas.svelte für sein eigenes Ziehen auf freier Fläche verwendet, kein
+	zweiter Mechanismus (features/README.md, Leitplanke 3). Bleibt die Bewegung unter der
+	Schwelle, läuft der Long-Press-Timer unverändert weiter (Zittern ist kein Drag).
 -->
 <script lang="ts">
 	import { placeFeatures, type Placement } from '../../layout/jitter';
@@ -35,6 +52,9 @@
 	import type { Feature, FeatureId, FeatureMap } from '../../model/types';
 	import { highlight } from '../../store/highlight';
 	import { connectSource, selectedId } from '../../store/selection';
+	import { panBy } from '../../store/viewport';
+	import { hitAreaRadiusForScale } from '../../interaction/hitArea';
+	import { exceedsLongPressDragThreshold } from '../../interaction/longPress';
 
 	/** Radius des Halo-Kreises um das selektierte Feature (F-11, Abschnitt „Darstellung"). */
 	const HALO_RADIUS = 15;
@@ -52,16 +72,36 @@
 		map,
 		domainMax,
 		scale = 1,
+		pxPerUnit = 1,
+		toContentPoint,
 		onLongPress
 	}: {
 		map: FeatureMap;
 		domainMax: number;
 		scale?: number;
+		/** CSS-Pixel je Karten-Inhaltseinheit bei Maßstab 1 (MapCanvas.svelte, gemessen über
+		 * `getScreenCTM()` der äußeren `<svg>`) — F-22, Grundlage der tatsächlichen
+		 * Bildschirmgröße der Trefferfläche. */
+		pxPerUnit?: number;
+		/** Rechnet eine Bildschirmposition in den unskalierten Inhaltsraum von VIEWBOX/PLOT um
+		 * (dieselbe Funktion wie in MapCanvas.svelte) — F-22: Grundlage für das Verschieben der
+		 * Karte, wenn ein Long-Press-Druck die 10-px-Schwelle überschreitet. */
+		toContentPoint: (clientX: number, clientY: number) => { x: number; y: number };
 		/** Long-Press auf einem Touchgerät (F-16, Ablauf Schritt 1; PRD UI-12) — meldet
 		 * Bildschirmposition und Kennung wie ein Rechtsklick, den MapCanvas.svelte für einen
 		 * Feature-Treffer über `onContextMenu` weitergibt. */
 		onLongPress: (x: number, y: number, id: FeatureId) => void;
 	} = $props();
+
+	/** Trefferkreis-Radius in Karten-Inhaltseinheiten (F-22, Abschnitt „Trefferflächen"; UI-16):
+	 * die reine Umrechnung aus dem aktuellen Maßstab (hitAreaRadiusForScale, geht von einer
+	 * Inhaltseinheit ≈ einem Bildschirmpixel bei Maßstab 1 aus), zusätzlich durch `pxPerUnit`
+	 * auf die tatsächlich gerenderte Größe der äußeren `<svg>` umgerechnet, mit einem kleinen
+	 * Sicherheitsaufschlag gegen Rundungsfehler der CTM-Messung. */
+	const HIT_AREA_SAFETY_MARGIN = 1.05;
+	let hitAreaRadius = $derived(
+		(hitAreaRadiusForScale(scale) / Math.max(pxPerUnit, 0.0001)) * HIT_AREA_SAFETY_MARGIN
+	);
 
 	/** Radius des Signaturpunkts (F-09, Abschnitt „Darstellung"). */
 	const NODE_RADIUS = 8;
@@ -144,6 +184,10 @@
 			longPressFired = false;
 			return;
 		}
+		if (dragging) {
+			dragging = false;
+			return;
+		}
 		selectedId.set(id);
 	}
 
@@ -165,11 +209,31 @@
 	 * Feature zusätzlich über den anschließenden synthetischen Klick selektiert. */
 	let longPressFired = false;
 
+	/** Bildschirmposition, an der der laufende Touch begonnen hat, oder null ohne laufenden Druck
+	 * (F-22, Abschnitt „Trefferflächen") — Grundlage der 10-px-Schwelle zwischen Long-Press und
+	 * Drag. */
+	let touchStartPoint: { x: number; y: number } | null = null;
+
+	/** Ursprung eines laufenden Long-Press-Drags im unskalierten Inhaltsraum von VIEWBOX/PLOT
+	 * (`toContentPoint()`), gesetzt sobald die 10-px-Schwelle überschritten wird und bei jeder
+	 * weiteren Bewegung aktualisiert — dasselbe Verfahren wie MapCanvas.svelte's eigenes Ziehen
+	 * auf freier Fläche (F-22). */
+	let dragOrigin: { x: number; y: number } | null = null;
+
+	/** True, sobald eine laufende Berührung als Drag statt als Long-Press gilt (F-22, Abschnitt
+	 * „Trefferflächen": „Bewegt sich der Finger … um mehr als 10 px, gilt es als Drag") —
+	 * verhindert danach zusätzlich die Selektion durch den abschließenden synthetischen Klick,
+	 * wie longPressFired es bereits für einen erfolgreichen Long-Press tut. */
+	let dragging = false;
+
 	function stopTouchDragStart(event: TouchEvent, id: FeatureId): void {
 		event.stopPropagation();
 		const touch = event.touches[0];
 		if (!touch) return;
 		const point = { x: touch.clientX, y: touch.clientY };
+		touchStartPoint = point;
+		dragOrigin = null;
+		dragging = false;
 		longPressTimer = setTimeout(() => {
 			longPressTimer = undefined;
 			longPressFired = true;
@@ -177,14 +241,81 @@
 		}, LONG_PRESS_MS);
 	}
 
-	/** Bricht einen laufenden Long-Press-Timer ab — Loslassen, Bewegen oder Abbrechen der
-	 * Berührung vor Ablauf der Frist zählt nicht als Long-Press (F-16, Ablauf Schritt 1). */
+	/** Bricht einen laufenden Long-Press-Timer ab — Loslassen oder Abbrechen der Berührung vor
+	 * Ablauf der Frist zählt nicht als Long-Press (F-16, Ablauf Schritt 1). Eine Bewegung bricht
+	 * ihn nur noch ab, wenn sie die 10-px-Schwelle überschreitet (F-22, siehe
+	 * handleTouchMove()) — kleine Bewegungen (Zittern) lassen den Timer unangetastet weiterlaufen. */
 	function cancelLongPress(): void {
 		if (longPressTimer === undefined) return;
 		clearTimeout(longPressTimer);
 		longPressTimer = undefined;
 	}
+
+	/** F-22, Abschnitt „Trefferflächen": Bewegt sich der Finger während eines laufenden
+	 * Long-Press-Drucks um mehr als `LONG_PRESS_DRAG_THRESHOLD_PX`, gilt es als Drag statt als
+	 * Long-Press — der Timer bricht ab, und die Bewegung verschiebt stattdessen die Karte, über
+	 * dieselbe Bildschirm-zu-Inhaltsraum-Umrechnung, die MapCanvas.svelte für sein eigenes Ziehen
+	 * auf freier Fläche verwendet (kein zweiter Mechanismus, features/README.md, Leitplanke 3).
+	 * Bleibt die Bewegung unter der Schwelle, bleibt der Long-Press-Timer unverändert bestehen. */
+	function handleTouchMove(event: TouchEvent): void {
+		const touch = event.touches[0];
+		if (!touch || !touchStartPoint) return;
+
+		if (!dragging) {
+			const dx = touch.clientX - touchStartPoint.x;
+			const dy = touch.clientY - touchStartPoint.y;
+			if (!exceedsLongPressDragThreshold(dx, dy)) return;
+			dragging = true;
+			cancelLongPress();
+			dragOrigin = toContentPoint(touchStartPoint.x, touchStartPoint.y);
+		}
+
+		event.stopPropagation();
+		event.preventDefault();
+		const point = toContentPoint(touch.clientX, touch.clientY);
+		if (dragOrigin) panBy(point.x - dragOrigin.x, point.y - dragOrigin.y);
+		dragOrigin = point;
+	}
+
+	/** Beendet einen laufenden Touch (Loslassen oder Abbrechen) — setzt sowohl den Long-Press- als
+	 * auch den Drag-Zustand zurück (F-22). */
+	function handleTouchEnd(): void {
+		cancelLongPress();
+		touchStartPoint = null;
+		dragOrigin = null;
+	}
 </script>
+
+<!-- F-22, Abschnitt „Trefferflächen"; UI-16: unsichtbare Trefferkreise, mindestens 44 px
+	Bildschirmgröße unabhängig von Breakpoint und Maßstab (siehe hitAreaRadius oben) — in einer
+	eigenen, vor den sichtbaren Signaturen gezeichneten Gruppe, statt als Kind von `<g class="node">`
+	(so noch in einer früheren Fassung dieser Datei): Bei eng benachbarten oder sich deckenden
+	Signaturen (F-09, Jitter) überlappen sich die vergrößerten Trefferkreise benachbarter Features
+	unvermeidlich; läge der Trefferkreis eines Features im selben Element wie seine sichtbare
+	Signatur, könnte der Trefferkreis eines später gezeichneten Nachbarn die sichtbare Signatur
+	eines früheren Features optisch überdecken und dessen eigenen Klick abfangen. Da alle
+	sichtbaren Signaturen unten unverändert danach gezeichnet werden, liegt an jeder sichtbaren
+	Signatur stets sie selbst obenauf; die Trefferkreise vergrößern lediglich die Fläche daneben.
+	Dieselben Ereignisbehandlungen wie an `<g class="node">` (unten), weil ein Treffer auf einen
+	reinen Trefferkreis (außerhalb jeder sichtbaren Signatur) genauso zu behandeln ist. -->
+<g class="hitareas">
+	{#each placements as placement (placement.id)}
+		<circle
+			class="hitarea"
+			data-testid="feature-hitarea-{placement.id}"
+			cx={placement.x}
+			cy={placement.y}
+			r={hitAreaRadius}
+			pointer-events="all"
+			onclick={(event) => selectFeature(event, placement.id)}
+			onmousedown={stopDragStart}
+			ontouchstart={(event) => stopTouchDragStart(event, placement.id)}
+			ontouchend={handleTouchEnd}
+			ontouchmove={handleTouchMove}
+			ontouchcancel={handleTouchEnd}
+		/>
+	{/each}
+</g>
 
 <g class="nodes">
 	{#each anchors as anchor, index (index)}
@@ -220,9 +351,9 @@
 			onclick={(event) => selectFeature(event, placement.id)}
 			onmousedown={stopDragStart}
 			ontouchstart={(event) => stopTouchDragStart(event, placement.id)}
-			ontouchend={cancelLongPress}
-			ontouchmove={cancelLongPress}
-			ontouchcancel={cancelLongPress}
+			ontouchend={handleTouchEnd}
+			ontouchmove={handleTouchMove}
+			ontouchcancel={handleTouchEnd}
 		>
 			{#if isSelected}
 				<circle
@@ -301,6 +432,14 @@
 	}
 	.node.sel text {
 		font-weight: 600;
+	}
+	/* F-22, Abschnitt „Trefferflächen": unsichtbare Trefferkreise, jetzt in einer eigenen Gruppe
+	   vor „.nodes" (siehe Markup-Kommentar dort), deshalb kein „.node circle"-Grundstil zu
+	   überschreiben. */
+	.hitareas circle.hitarea {
+		fill: transparent;
+		stroke: none;
+		cursor: pointer;
 	}
 	/* Halo-Kreis um das selektierte Feature (F-11, Abschnitt „Darstellung"). Selektor eine Stufe
 	   spezifischer als „.node circle", damit dessen Grundfarben (Tinte/Papier) hier nicht

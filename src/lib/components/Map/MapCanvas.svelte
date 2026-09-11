@@ -61,6 +61,14 @@
 	DOM-Attribute allein nicht trügen. Long-Press bildet denselben Treffer über Touch nach
 	(Edges.svelte, `onLongPress`) — dort liegt die volle Beziehung als `g.relation` bereits vor,
 	ein Nachschlagen entfällt.
+
+	F-22 · Responsives Verhalten und Touch (features/F-22-responsiv.md, Abschnitt
+	„Trefferflächen"): `screenPxPerUnit` (gemessen über `getScreenCTM()` der äußeren `<svg>`, bei
+	jeder Größenänderung über einen ResizeObserver neu) sowie `toContentPoint` werden an
+	FeatureNodes.svelte weitergereicht, damit dessen Trefferkreise unabhängig vom Breakpoint
+	wirklich mindestens 44 px Bildschirmgröße erreichen (UI-16) und ein Long-Press, der die
+	10-px-Schwelle überschreitet, dieselbe Umrechnung für das Verschieben der Karte verwendet wie
+	das Ziehen auf freier Fläche hier (kein zweiter Mechanismus, features/README.md, Leitplanke 3).
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
@@ -69,6 +77,7 @@
 	import type { FeatureId, FeatureMap, Relation } from '../../model/types';
 	import { clearSelection, handleEscape } from '../../store/selection';
 	import { panBy, viewport, zoomAt } from '../../store/viewport';
+import { hitAreaRadiusForScale } from '../../interaction/hitArea';
 	import Regions from './Regions.svelte';
 	import Grid from './Grid.svelte';
 	import Axes from './Axes.svelte';
@@ -80,10 +89,14 @@
 	let {
 		map,
 		domainMax,
+		legendForced = false,
 		onContextMenu
 	}: {
 		map: FeatureMap;
 		domainMax: number;
+		/** F-22, Abschnitt „Umfang", Zeile „Zeichenerklärung": erzwingt die Zeichenerklärung unter
+		 * 1080 px sichtbar, ausgelöst über „Ansicht → Zeichenerklärung" (routes/+page.svelte). */
+		legendForced?: boolean;
 		/** Rechtsklick oder Long-Press auf der Karte (F-16, Ablauf Schritt 1; F-17) —
 		 * Bildschirmposition und Ziel (ein bestimmtes Feature, eine Beziehung oder freie Fläche). */
 		onContextMenu: (x: number, y: number, target: ContextMenuTarget) => void;
@@ -101,6 +114,24 @@
 	let placements = $derived(placeFeatures(map, domainMax));
 
 	let svgEl: SVGSVGElement | undefined;
+
+	/** CSS-Pixel je Karten-Inhaltseinheit bei Maßstab 1 — das Verhältnis zwischen der tatsächlich
+	 * gerenderten Größe der äußeren `<svg>` (abhängig von der Fenster-/Containerbreite,
+	 * `preserveAspectRatio="xMidYMid meet"`) und VIEWBOX. F-22, Abschnitt „Trefferflächen":
+	 * `hitAreaRadiusForScale()` (src/lib/interaction/hitArea.ts) nimmt nur den Zoomfaktor
+	 * entgegen und geht dabei von einer Inhaltseinheit ≈ einem Bildschirmpixel bei Maßstab 1 aus
+	 * (siehe dortiger Modulkommentar) — dieser Faktor liefert die noch fehlende Umrechnung auf die
+	 * tatsächliche Bildschirmgröße, die je nach Fensterbreite (375/834/1440 px) stark
+	 * unterschiedlich ausfällt, damit die Trefferfläche bei jedem Breakpoint wirklich mindestens
+	 * 44 px erreicht (UI-16), nicht nur unter der vereinfachten Annahme der reinen Rechenfunktion. */
+	let screenPxPerUnit = $state(1);
+
+	function measureScreenPxPerUnit(): void {
+		if (!svgEl) return;
+		const ctm = svgEl.getScreenCTM();
+		if (!ctm || ctm.a <= 0) return;
+		screenPxPerUnit = ctm.a;
+	}
 
 	/** Empfindlichkeit des Mausrads: ein Rad-Ereignis mit deltaY=240 (eine „Rastung" in den
 	 * meisten Browsern) ergibt einen Faktor von e^(240·0,0015) ≈ 1,43 (F-12, Zeile „Zoom"). */
@@ -197,6 +228,29 @@
 		}
 	}
 
+	/** F-22, Abschnitt „Trefferflächen": liefert das Feature, dessen tatsächlich gerenderter Punkt
+	 * (placement.x/y) dem übergebenen Inhaltsraum-Punkt am nächsten liegt, sofern diese Distanz
+	 * innerhalb des aktuellen Trefferkreisradius liegt (`hitAreaRadiusForScale()`,
+	 * src/lib/interaction/hitArea.ts, ebenso durch `screenPxPerUnit` umgerechnet wie in
+	 * FeatureNodes.svelte, kein zweiter Radius, features/README.md Leitplanke 3) — sonst `null`.
+	 * Löst über die tatsächliche Distanz auf statt über das oberste DOM-Element an der
+	 * Zeigerposition: Bei eng benachbarten oder sich deckenden Signaturen (F-09, Jitter) trifft
+	 * ein Rechtsklick genau auf den Ankerpunkt eines Features sonst nicht zuverlässig dieses
+	 * Feature, sondern ein zufällig darüberliegendes. */
+	function nearestFeatureWithinHitArea(contentX: number, contentY: number): FeatureId | null {
+		const radius = hitAreaRadiusForScale($viewport.scale) / Math.max(screenPxPerUnit, 0.0001);
+		let nearestId: FeatureId | null = null;
+		let nearestDistance = Infinity;
+		for (const placement of placements) {
+			const distance = Math.hypot(placement.x - contentX, placement.y - contentY);
+			if (distance < nearestDistance) {
+				nearestDistance = distance;
+				nearestId = placement.id;
+			}
+		}
+		return nearestId !== null && nearestDistance <= radius ? nearestId : null;
+	}
+
 	/** Rechtsklick auf die Karte (F-16, Ablauf Schritt 1; Absatz nach „Fachregeln") — capturing
 	 * auf `window`, siehe Modulkommentar zur Begründung. Nur Rechtsklicks innerhalb dieses
 	 * SVGs werden behandelt; anderswo (Kopfband, Verzeichnis, Kartuschen) bleibt das native
@@ -220,12 +274,10 @@
 			}
 		}
 
-		const featureEl = target.closest?.('[data-feature-id]');
-		if (featureEl) {
-			onContextMenu(event.clientX, event.clientY, {
-				kind: 'feature',
-				id: featureEl.getAttribute('data-feature-id') as FeatureId
-			});
+		const { x: contentX, y: contentY } = toContentPoint(event.clientX, event.clientY);
+		const nearestId = nearestFeatureWithinHitArea(contentX, contentY);
+		if (nearestId !== null) {
+			onContextMenu(event.clientX, event.clientY, { kind: 'feature', id: nearestId });
 		} else {
 			onContextMenu(event.clientX, event.clientY, { kind: 'blank' });
 		}
@@ -242,11 +294,23 @@
 		window.addEventListener('mouseup', endDrag);
 		// capture: true — siehe Modulkommentar (F-16, Kontextmenü-Abschnitt).
 		window.addEventListener('contextmenu', handleContextMenu, true);
+
+		// F-22, Abschnitt „Trefferflächen": screenPxPerUnit ändert sich nur, wenn die tatsächlich
+		// gerenderte Größe der `<svg>` sich ändert (Fensterbreite/-höhe, Breakpoint-Wechsel) — ein
+		// ResizeObserver auf dem Element selbst deckt das zuverlässiger ab als ein reiner
+		// window-„resize"-Listener (der z. B. bei einer Änderung der Kopfband-/Fußleistenhöhe
+		// durch Zeilenumbruch nicht feuert, obwohl sich die verbleibende Kartenfläche dabei
+		// ändert).
+		measureScreenPxPerUnit();
+		const resizeObserver = new ResizeObserver(() => measureScreenPxPerUnit());
+		if (svgEl) resizeObserver.observe(svgEl);
+
 		return () => {
 			window.removeEventListener('keydown', handleKeydown);
 			window.removeEventListener('mousemove', handleMouseMove);
 			window.removeEventListener('mouseup', endDrag);
 			window.removeEventListener('contextmenu', handleContextMenu, true);
+			resizeObserver.disconnect();
 		};
 	});
 </script>
@@ -305,11 +369,18 @@
 		<Grid {domainMax} />
 		<Axes {domainMax} />
 		<Edges {map} {placements} onLongPress={handleEdgeLongPress} />
-		<FeatureNodes {map} {domainMax} scale={$viewport.scale} onLongPress={handleFeatureContextMenu} />
+		<FeatureNodes
+			{map}
+			{domainMax}
+			scale={$viewport.scale}
+			pxPerUnit={screenPxPerUnit}
+			{toContentPoint}
+			onLongPress={handleFeatureContextMenu}
+		/>
 	</g>
 </svg>
 
-<Legend />
+<Legend forced={legendForced} />
 
 <style>
 	.map {

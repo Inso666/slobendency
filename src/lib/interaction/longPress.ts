@@ -26,5 +26,5 @@ export const LONG_PRESS_DRAG_THRESHOLD_PX = 10;
  * nicht, die Bewegung verschiebt stattdessen die Karte.
  */
 export function exceedsLongPressDragThreshold(dx: number, dy: number): boolean {
-	throw new Error('not implemented');
+	return Math.hypot(dx, dy) > LONG_PRESS_DRAG_THRESHOLD_PX;
 }
