@@ -29,7 +29,7 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-21 | PNG-Export | fertig | — | gemergt 10.09. 23:15 |
 | F-22 | Responsives Verhalten und Touch | fertig | — | gemergt 11.09. 14:31 |
 | F-23 | Fußleiste, Hinweise, Zurücksetzen | fertig | — | gemergt 10.09. 18:12 |
-| F-24 | Hervorhebung: Abdunkeln oder Ausblenden | in Arbeit | feature/F-24-hervorhebung-sichtbarkeit | 15 Tests rot committet (ab23369) |
+| F-24 | Hervorhebung: Abdunkeln oder Ausblenden | in QA | feature/F-24-hervorhebung-sichtbarkeit | 530/530 Unit grün; 1 Testfehler in E2E gefunden und freigegeben, QA-Agent behebt |
 | F-25 | Datenzoom (ersetzt Zoom-Mechanik F-12) | offen | — | PRD 1.1, 11.09.; teilt scales.ts mit F-26, läuft davor |
 | F-26 | Schätzmodus: Fibonacci oder freier Wertebereich | offen | — | PRD 1.1, 11.09.; hängt an F-25 |
 
@@ -244,6 +244,21 @@ hängen am bestehenden Menü **Ansicht ▾** statt einer neuen Symbolleisten-Sch
 PRD auf Version 1.1, drei neue Feature-Dateien F-24 bis F-26 (siehe Abhängigkeitstabelle in
 `features/README.md`). F-25 und F-26 teilen sich `src/lib/layout/scales.ts` und laufen deshalb
 nacheinander.
+
+**Testfehler in `e2e/F-24-hervorhebung-sichtbarkeit.spec.ts` (11.09.).** Der Feature-Agent für
+F-24 hat eine Zusicherung als fehlerhaft gemeldet, ohne sie zu ändern. Geprüft und bestätigt,
+kein Quellwiderspruch, sondern ein Versehen im Test selbst: Test „macht ausgeblendete Elemente
+weder klickbar noch per Tab erreichbar" klickt an die vormalige Bildschirmposition der
+Trefferfläche des jetzt ausgeblendeten Features X und erwartet danach zusätzlich zu „kein Halo
+für X", dass die Selektion von A unverändert bleibt (`feature-halo-a` weiterhin sichtbar). PRD
+5.6 verlangt für ein ausgeblendetes Element aber ausdrücklich „keine Trefferfläche" — der Klick
+trifft an dieser Stelle also zwangsläufig freie Fläche (Gitter/Hintergrund), und FR-46 legt
+bindend fest: „Die Selektion wird durch Klick auf freie Fläche … aufgehoben." Die zusätzliche
+Zusicherung verlangt damit einen Verstoß gegen FR-46. Freigegeben: Die Zusicherung wird auf das
+durch FR-46 tatsächlich verlangte Verhalten umgestellt — der Klick löscht die Selektion von A
+(`feature-halo-a` danach nicht mehr sichtbar, ebenso weiterhin kein Halo für X). Die eigentliche
+Prüfabsicht des Tests (X ist nicht anklickbar) bleibt unverändert. Der QA-Agent für F-24 setzt
+das um.
 
 ## Sessionprotokoll
 
