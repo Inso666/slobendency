@@ -51,12 +51,24 @@
 	vom Test-Agenten vorgegeben und von F-15-Unit-Tests exakt auf diese Form geprüft) — die
 	vollständige Beziehung (`from`/`to`) wird deshalb hier aus der bekannten Blickrichtung
 	rekonstruiert, statt detail.ts’ Signatur zu erweitern.
+
+	F-22 · Responsives Verhalten und Touch (features/F-22-responsiv.md, Abschnitt „Umfang", Zeile
+	„Detail-Kartusche"; UI-15): Unter 768 px erscheint die Kartusche als Bottom Sheet über die
+	volle Breite, unten am Fenster verankert (`position: fixed`, nicht mehr `absolute` innerhalb
+	der Kartenfläche, damit sie wirklich am Fensterrand sitzt statt an dem von
+	`<main class="chart">`), mit einer Höchsthöhe von 70vh, damit ein Streifen der Karte darüber
+	sichtbar bleibt (AK „verdeckt die Karte nicht vollständig"). Der Zuggriff
+	(`detail-drag-handle`) ist rein optisch der übliche Anfasser eines Bottom Sheets; da keine
+	Quelle eine Wischgeste zum Schließen verlangt (design/03-seekarte.html kennt diesen Zustand
+	nicht, design/README.md: „noch zu entwerfen"), zieht er hier zusätzlich zu — Ziehen um mehr
+	als `DRAG_TO_CLOSE_THRESHOLD_PX` nach unten hebt die Selektion auf (`selectedId.set(null)`),
+	dieselbe Wirkung wie ein Tap ins Leere auf der Karte (FR-46). */
 -->
 <script lang="ts">
 	import type { Feature, FeatureMap, Relation } from '../../model/types';
 	import { bearingsOf, quadrantLabel, type Bearing } from './detail';
 	import { quadrantOf } from '../../model/validation';
-	import { connectSource, selectedId } from '../../store/selection';
+	import { clearSelection, connectSource, selectedId } from '../../store/selection';
 	import { deleteFeature, deleteRelation } from '../../store/mapStore';
 
 	let {
@@ -159,9 +171,42 @@
 	function handleConfirmDialogClose(): void {
 		deleteConfirmOpen = false;
 	}
+
+	// F-22, Abschnitt „Umfang", Zeile „Detail-Kartusche" (UI-15): Zuggriff des Bottom Sheets unter
+	// 768 px. Ziehen nach unten über die Schwelle hinaus schließt die Kartusche — dieselbe
+	// Wirkung wie ein Tap ins Leere auf der Karte (FR-46).
+	const DRAG_TO_CLOSE_THRESHOLD_PX = 60;
+	let dragHandleStartY: number | null = null;
+
+	function handleDragHandleStart(event: PointerEvent): void {
+		dragHandleStartY = event.clientY;
+	}
+
+	function handleDragHandleMove(event: PointerEvent): void {
+		if (dragHandleStartY === null) return;
+		if (event.clientY - dragHandleStartY > DRAG_TO_CLOSE_THRESHOLD_PX) {
+			dragHandleStartY = null;
+			clearSelection();
+		}
+	}
+
+	function handleDragHandleEnd(): void {
+		dragHandleStartY = null;
+	}
 </script>
 
 <div class="detail cartouche" data-testid="detail-cartouche">
+	<!-- F-22, UI-15: Zuggriff des Bottom Sheets — nur unter 768 px sichtbar (siehe @media-Block).
+		Rein optisch der übliche Anfasser; zusätzlich schließt Ziehen über die Schwelle hinaus. -->
+	<div
+		class="drag-handle"
+		data-testid="detail-drag-handle"
+		aria-hidden="true"
+		onpointerdown={handleDragHandleStart}
+		onpointermove={handleDragHandleMove}
+		onpointerup={handleDragHandleEnd}
+		onpointercancel={handleDragHandleEnd}
+	></div>
 	<div class="hd">
 		<h3>{displayName}</h3>
 		<div class="sub mono">{feature.id}</div>
@@ -314,6 +359,10 @@
 		top: 26px;
 		z-index: 6;
 		width: 300px;
+	}
+	/* F-22, UI-15: Zuggriff des Bottom Sheets — nur unter 768 px sichtbar (siehe @media-Block). */
+	.drag-handle {
+		display: none;
 	}
 	.detail .hd {
 		padding: 13px 16px 11px;
@@ -526,15 +575,31 @@
 		color: var(--magenta);
 	}
 
-	/* UI-15: Unter 768 px wird die Kartusche zum Bottom Sheet über die volle Breite — das ist
-	   laut F-15, Abschnitt "Verhalten", der Umsetzung in F-22 vorbehalten. Hier wird nur
-	   verhindert, dass die 300-px-Breite die Seite waagerecht überlaufen lässt (CLAUDE.md,
-	   QA-Abgleich: kein horizontales Scrollen bei 375 px). */
+	/* UI-15: Unter 768 px wird die Kartusche zum Bottom Sheet über die volle Breite, unten am
+	   Fenster verankert (F-22, Abschnitt "Umfang", Zeile "Detail-Kartusche"). `position: fixed`
+	   statt `absolute` — sonst wäre sie relativ zu <main class="chart"> verankert, nicht zum
+	   Fensterrand. Die Höchsthöhe 70vh lässt einen Streifen der Karte darüber frei (AK "verdeckt
+	   die Karte nicht vollständig"). */
 	@media (max-width: 768px) {
 		.detail {
-			right: 16px;
-			top: 16px;
-			width: 270px;
+			position: fixed;
+			left: 0;
+			right: 0;
+			top: auto;
+			bottom: 0;
+			width: 100%;
+			max-height: 70vh;
+			overflow-y: auto;
+			z-index: 15;
+		}
+		.drag-handle {
+			display: block;
+			width: 36px;
+			height: 4px;
+			margin: 10px auto 2px;
+			border-radius: 2px;
+			background: var(--hair);
+			touch-action: none;
 		}
 	}
 </style>

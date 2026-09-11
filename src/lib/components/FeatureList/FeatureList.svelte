@@ -36,6 +36,15 @@
 	seinen Platzhalter "Label oder ID suchen", die Sortierauswahl über
 	`getByRole('combobox', { name: 'Sortierung' })` mit den Optionen "Anzeigename" / "Nutzen" /
 	"Aufwand" (Entscheidung des Orchestrators zu FR-53, siehe features/STATUS.md).
+
+	F-22 · Responsives Verhalten und Touch (features/F-22-responsiv.md, Abschnitt „Umfang", Zeile
+	„Verzeichnis"; UI-11): Unter 768 px wird das Panel zum Vollbild-Overlay statt zum seitlichen
+	Panel — `position: fixed; inset: 0` statt der `absolute`-Positionierung innerhalb von
+	`<main class="chart">`, sonst deckte es nur deren Höhe ab (ohne Kopfband/Fußleiste), nicht den
+	ganzen Bildschirm. Die eigene Schließen-Leiste (AK „… schließt über einen sichtbaren Knopf")
+	ist ein Knopf "Schließen" im Kopf des Panels, nur unter 768 px sichtbar — der Kopfband-Knopf
+	"Verzeichnis", über den das Panel sich ebenfalls schließen ließe, liegt in diesem Zustand
+	unter dem Vollbild-Overlay und ist nicht mehr erreichbar.
 -->
 <script lang="ts">
 	import type { Feature, FeatureId } from '../../model/types';
@@ -173,7 +182,12 @@
 	-->
 	<aside class="index" role="complementary" aria-labelledby="directory-title">
 		<header>
-			<h2 id="directory-title">Verzeichnis</h2>
+			<div class="hd-row">
+				<h2 id="directory-title">Verzeichnis</h2>
+				<!-- F-22, UI-11: Schließen-Leiste des Vollbild-Overlays unter 768 px — der
+					Kopfband-Knopf "Verzeichnis" liegt dann unter dem Overlay. -->
+				<button type="button" class="close" onclick={onClose}>Schließen</button>
+			</div>
 			<p>{subtitle}</p>
 		</header>
 
@@ -257,12 +271,33 @@
 		padding: 15px 16px 10px;
 		border-bottom: 1px solid var(--hair);
 	}
+	.hd-row {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 10px;
+	}
 	.index h2 {
 		margin: 0;
 		font-family: 'Fraunces', serif;
 		font-weight: 600;
 		font-size: 16px;
 		letter-spacing: 0.02em;
+	}
+	/* F-22, UI-11: Schließen-Leiste des Vollbild-Overlays — nur unter 768 px sichtbar (siehe
+	   @media-Block unten), dort mindestens 44 x 44 px (UI-16). */
+	.index .close {
+		display: none;
+		flex: none;
+		background: transparent;
+		border: 1px solid var(--hair);
+		color: var(--ink);
+		padding: 6px 12px;
+		font-size: 13px;
+		cursor: pointer;
+	}
+	.index .close:hover {
+		border-color: var(--ink);
 	}
 	.index header p {
 		margin: 2px 0 0;
@@ -374,13 +409,23 @@
 			width: 250px;
 		}
 	}
-	/* F-14, Abschnitt "Umfang": Unter 768 px wird das Panel zum Vollbild-Overlay. Der Feinschliff
-	   der schmalen Darstellung (Bottom Sheet) ist F-22. */
+	/* F-14, Abschnitt "Umfang": Unter 768 px wird das Panel zum Vollbild-Overlay (UI-11). F-22,
+	   Abschnitt "Umfang", Zeile "Verzeichnis": `position: fixed` statt `absolute` — sonst deckte
+	   das Panel nur die Höhe von <main class="chart"> ab (ohne Kopfband/Fußleiste), nicht den
+	   ganzen Bildschirm. z-index über allen anderen Kartuschen/Menüs der Karte, damit das
+	   Vollbild wirklich alles verdeckt. */
 	@media (max-width: 768px) {
 		.index {
-			right: 0;
+			position: fixed;
+			inset: 0;
 			width: auto;
 			border-right: 0;
+			z-index: 20;
+		}
+		.index .close {
+			display: block;
+			min-width: 44px;
+			min-height: 44px;
 		}
 	}
 </style>

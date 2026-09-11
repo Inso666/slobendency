@@ -22,6 +22,14 @@
 	— nötig, weil sich die Beschriftungen "Bearbeiten", "Löschen" und "Beziehung anlegen" über
 	alle Zeilen wiederholen und ohne Container-Kennzeichen nicht eindeutig ansprechbar wären
 	(e2e/F-14-verzeichnis.spec.ts).
+
+	F-22 · Responsives Verhalten und Touch (features/F-22-responsiv.md, Abschnitt
+	„Trefferflächen"; UI-16): Unter 768 px sind diese Aktionen mindestens 44 × 44 px groß statt
+	22 × 22 px, und dauerhaft sichtbar statt nur bei Hover/Fokus — ein Touchgerät kennt keinen
+	verlässlichen Hover-Zustand, ohne den die Aktionen dort sonst unerreichbar blieben (AK-16:
+	„… bearbeiten, löschen … vollständig durchführen"). Die Zeile bricht dafür zweizeilig um
+	(Name/Lotung oben, Aktionen darunter), weil daneben bei 375 px kein Platz für drei 44-px-Knöpfe
+	neben der Punktführung bliebe.
 -->
 <script lang="ts">
 	import type { Feature, FeatureId } from '../../model/types';
@@ -165,5 +173,38 @@
 	.acts button:hover {
 		border-color: var(--hair);
 		color: var(--ink);
+	}
+
+	/* F-22, Abschnitt „Trefferflächen"; UI-16: unter 768 px mindestens 44 × 44 px und dauerhaft
+	   sichtbar statt hover-gebunden (Touchgeräte kennen keinen verlässlichen Hover-Zustand). Die
+	   Zeile bricht dafür zweizeilig um, statt die Aktionen weiterhin über der Punktführung
+	   schweben zu lassen — bei 375 px Breite ist dafür kein Platz. */
+	@media (max-width: 768px) {
+		.entry {
+			flex-wrap: wrap;
+			row-gap: 6px;
+			padding: 8px 16px;
+		}
+		.pick {
+			flex: 1 1 100%;
+		}
+		.acts {
+			position: static;
+			transform: none;
+			flex: 1 1 100%;
+			justify-content: flex-end;
+			opacity: 1;
+			background: transparent;
+			gap: 8px;
+		}
+		.entry.here .acts {
+			background: transparent;
+		}
+		.acts button {
+			width: 44px;
+			height: 44px;
+			font-size: 15px;
+			border: 1px solid var(--hair);
+		}
 	}
 </style>

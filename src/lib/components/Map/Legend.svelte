@@ -8,10 +8,18 @@
 
 	Position, Breite und Musterlinien folgen design/03-seekarte.html (Klasse `.legend`, Einträge
 	unter `.legend div`). Farben ausschließlich über Token aus src/app.css.
--->
-<script lang="ts"></script>
 
-<div class="legend cartouche" data-testid="legend">
+	F-22 · Responsives Verhalten und Touch (features/F-22-responsiv.md, Abschnitt „Umfang", Zeile
+	„Zeichenerklärung"): „Ausgeblendet, erreichbar über Ansicht → Zeichenerklärung." Unter 1080 px
+	bleibt die Zeichenerklärung per CSS ausgeblendet (unverändert, siehe @media-Block); `forced`
+	(von routes/+page.svelte über den neuen Menüeintrag „Zeichenerklärung" im Menü „Ansicht"
+	gesteuert) hebt das gezielt wieder auf.
+-->
+<script lang="ts">
+	let { forced = false }: { forced?: boolean } = $props();
+</script>
+
+<div class="legend cartouche" class:forced data-testid="legend">
 	<h3>Zeichenerklärung</h3>
 
 	<div data-testid="legend-requires">
@@ -96,7 +104,7 @@
 	}
 
 	@media (max-width: 1080px) {
-		.legend {
+		.legend:not(.forced) {
 			display: none;
 		}
 	}

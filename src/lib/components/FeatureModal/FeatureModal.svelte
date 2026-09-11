@@ -435,5 +435,11 @@
 			margin: 0;
 			inset: 0;
 		}
+		/* F-22, Abschnitt „Trefferflächen"/UI-16: „Beziehung hinzufügen" ist ein Knopf wie jeder
+		   andere in diesem Formular (app.css setzt dieselbe Mindesthöhe bereits für die
+		   gemeinsame `.btn`-Klasse — dieser Knopf trägt sie nicht, deshalb hier eigens). */
+		.add-relation {
+			min-height: 44px;
+		}
 	}
 </style>

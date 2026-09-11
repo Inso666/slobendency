@@ -123,6 +123,17 @@
 		viewMenuOpen = false;
 	}
 
+	// F-22 · Responsives Verhalten und Touch (features/F-22-responsiv.md, Abschnitt „Umfang",
+	// Zeile „Zeichenerklärung"): „Ausgeblendet, erreichbar über Ansicht → Zeichenerklärung."
+	// Derselbe Menü-Mechanismus wie „Ganze Karte zeigen" oben, kein zweiter Menü-Aufbau
+	// (features/README.md, Leitplanke 3).
+	let legendForced = $state(false);
+
+	function toggleLegendForced(): void {
+		legendForced = !legendForced;
+		viewMenuOpen = false;
+	}
+
 	// F-23 · „Karte zurücksetzen" (FR-75): Rückfrage im selben Muster wie die Löschrückfrage aus
 	// F-14/F-15 (features/STATUS.md, Entscheidung vom 06.09. zu FR-05) — `role="alertdialog"`,
 	// Name „Karte zurücksetzen", Knöpfe „Zurücksetzen"/„Abbrechen", als Kartusche über die Token
@@ -374,15 +385,37 @@
 			<span>Blatt 1 · Impact / Effort</span>
 		</div>
 		<div class="acts">
-			<button type="button" class="btn pri" onclick={openCreateModal}>+ Feature</button>
-			<button type="button" class="btn" onclick={openImportDialog}>Importieren</button>
+			<!-- F-22, Abschnitt „Umfang", Zeile „Kopfband": „Nur Symbole, seltener Gebrauchtes im
+				Überlaufmenü" (UI-17: „Die Toolbar reduziert sich auf Icons mit Overflow-Menü").
+				Unter 768 px blendet app.css (.icon-label) den Wortlaut nur visuell aus (dieselbe
+				sr-only-Technik wie üblich: Position/Clip statt display:none), NICHT aus dem
+				Accessibility-Baum — der zugängliche Name des Knopfs bleibt deshalb exakt der
+				bisherige Wortlaut ("+ Feature", "Importieren", "Verzeichnis", "Ansicht"), .icon-label
+				enthält ihn deshalb ungekürzt; getByRole('button', { name: … }) trifft dadurch
+				unverändert, bei jeder Breite (kein zweiter, separater aria-label nötig). Das
+				dekorative Symbol (.icon) daneben ist aria-hidden, trägt also nichts zum Namen bei.
+				Das „Überlaufmenü" für seltener Gebrauchtes besteht bereits: die Menüs „Ansicht"
+				(Ganze Karte zeigen/Zurücksetzen/Zeichenerklärung) und „Exportieren" (Textformat, SVG,
+				PNG-Optionen) fassen genau die selten benötigten Aktionen zusammen, während
+				„+ Feature", „Importieren" und „Verzeichnis" als für AK-16 unmittelbar nötige
+				Kernaktionen direkt erreichbar bleiben (Icons statt Untermenü) — dieselbe Aufteilung,
+				die bereits vor F-22 bestand, jetzt nur als Icon statt als Wortlaut dargestellt. -->
+			<button type="button" class="btn pri" onclick={openCreateModal}>
+				<span class="icon" aria-hidden="true">+</span>
+				<span class="icon-label">+ Feature</span>
+			</button>
+			<button type="button" class="btn" onclick={openImportDialog}>
+				<span class="icon" aria-hidden="true">↓</span>
+				<span class="icon-label">Importieren</span>
+			</button>
 			<button
 				type="button"
-				class="btn"
+				class="btn dir-toggle"
 				aria-pressed={directoryOpen}
 				onclick={toggleDirectory}
 			>
-				Verzeichnis
+				<span class="icon" aria-hidden="true">≡</span>
+				<span class="icon-label">Verzeichnis</span>
 			</button>
 			<div class="view-menu">
 				<button
@@ -392,12 +425,18 @@
 					aria-expanded={viewMenuOpen}
 					onclick={toggleViewMenu}
 				>
-					Ansicht
+					<span class="icon" aria-hidden="true">⤢</span>
+					<span class="icon-label">Ansicht</span>
 				</button>
 				{#if viewMenuOpen}
 					<div class="view-menu-panel cartouche">
 						<button type="button" onclick={showWholeMap}> Ganze Karte zeigen </button>
 						<button type="button" onclick={openResetConfirm}>Karte zurücksetzen</button>
+						<!-- F-22, Abschnitt „Umfang", Zeile „Zeichenerklärung": unter 1080 px
+							ausgeblendet, hierüber erreichbar. -->
+						<button type="button" aria-pressed={legendForced} onclick={toggleLegendForced}>
+							Zeichenerklärung
+						</button>
 					</div>
 				{/if}
 			</div>
@@ -411,7 +450,10 @@
 					aria-expanded={exportMenuOpen}
 					onclick={toggleExportMenu}
 				>
-					Exportieren
+					<!-- F-22, UI-17: Icon statt Wortlaut unter 768 px, siehe Kommentar bei "+ Feature"
+						oben. -->
+					<span class="icon" aria-hidden="true">↑</span>
+					<span class="icon-label">Exportieren</span>
 				</button>
 				{#if exportMenuOpen}
 					<div class="view-menu-panel cartouche">
@@ -519,7 +561,7 @@
 
 	<main class="chart">
 		<NoticeBar />
-		<MapCanvas map={$map} {domainMax} onContextMenu={openContextMenu} />
+		<MapCanvas map={$map} {domainMax} {legendForced} onContextMenu={openContextMenu} />
 		{#if $selectedFeature}
 			<DetailCartouche
 				map={$map}
