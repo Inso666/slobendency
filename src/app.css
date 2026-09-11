@@ -399,4 +399,17 @@ button {
 		overflow-y: auto;
 		z-index: 25;
 	}
+
+	/* UI-16, weiterhin: F-22, Abschnitt „Interaktion", Zeile „Vorgang abbrechen" nennt den Knopf
+	   „Abbrechen im Hinweisband" ausdrücklich als eigenen Mobil-Bedienweg (Ersatz für ESC) — er
+	   fällt deshalb ausdrücklich unter „Menüeinträge und Knöpfe … mindestens 44 × 44 px" (UI-16),
+	   ebenso der Schließen-Knopf des Hinweisbands aus F-23 (`.notice`, NoticeBar.svelte,
+	   gleiches Kartuschen-Muster). Beide Klassen gehören zu in routes/+page.svelte bzw.
+	   NoticeBar.svelte lokal, aber unskaliert definierten Komponenten — hier wie schon `.ribbon`,
+	   `.foot` usw. zentral in app.css durchgesetzt (Svelte-Scoping betrifft nur Selektoren
+	   innerhalb des jeweiligen `<style>`-Blocks, nicht diese globale Datei). */
+	.connect-banner button,
+	.notice button {
+		min-height: 44px;
+	}
 }
