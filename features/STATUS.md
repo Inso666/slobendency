@@ -30,7 +30,7 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-22 | Responsives Verhalten und Touch | fertig | — | gemergt 11.09. 14:31 |
 | F-23 | Fußleiste, Hinweise, Zurücksetzen | fertig | — | gemergt 10.09. 18:12 |
 | F-24 | Hervorhebung: Abdunkeln oder Ausblenden | fertig | — | gemergt 11.09. 19:30 |
-| F-25 | Datenzoom (ersetzt Zoom-Mechanik F-12) | offen | — | PRD 1.1, 11.09.; teilt scales.ts mit F-26, läuft davor |
+| F-25 | Datenzoom (ersetzt Zoom-Mechanik F-12) | in Tests | feature/F-25-datenzoom | Test-Agent schreibt; teilt scales.ts mit F-26, läuft davor |
 | F-26 | Schätzmodus: Fibonacci oder freier Wertebereich | offen | — | PRD 1.1, 11.09.; hängt an F-25 |
 
 ## Entscheidungen des Orchestrators
