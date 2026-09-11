@@ -29,7 +29,7 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-21 | PNG-Export | fertig | — | gemergt 10.09. 23:15 |
 | F-22 | Responsives Verhalten und Touch | fertig | — | gemergt 11.09. 14:31 |
 | F-23 | Fußleiste, Hinweise, Zurücksetzen | fertig | — | gemergt 10.09. 18:12 |
-| F-24 | Hervorhebung: Abdunkeln oder Ausblenden | offen | — | PRD 1.1, 11.09. |
+| F-24 | Hervorhebung: Abdunkeln oder Ausblenden | in Tests | feature/F-24-hervorhebung-sichtbarkeit | Test-Agent schreibt |
 | F-25 | Datenzoom (ersetzt Zoom-Mechanik F-12) | offen | — | PRD 1.1, 11.09.; teilt scales.ts mit F-26, läuft davor |
 | F-26 | Schätzmodus: Fibonacci oder freier Wertebereich | offen | — | PRD 1.1, 11.09.; hängt an F-25 |
 
