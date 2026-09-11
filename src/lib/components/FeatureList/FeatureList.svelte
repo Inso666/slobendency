@@ -55,6 +55,7 @@
 	import { connectSource, selectedId } from '../../store/selection';
 	import { centerOn } from '../../store/viewport';
 	import { domainMaxOf } from '../../layout/scales';
+	import { estimationMode, estimationRange } from '../../store/settings';
 	import {
 		displayNameOf,
 		filterFeatures,
@@ -88,7 +89,7 @@
 	/** Der Entwurf zeigt im Kopf "nach Impact" — die Vorauswahl ist deshalb der Nutzen. */
 	let sortBy = $state<SortKey>('impact');
 
-	let domainMax = $derived(domainMaxOf($map));
+	let domainMax = $derived(domainMaxOf($map, $estimationMode, $estimationRange));
 	let matches = $derived(filterFeatures($map.features, query));
 	let groups = $derived(groupByQuadrant(sortFeatures(matches, sortBy), domainMax));
 

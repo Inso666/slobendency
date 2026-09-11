@@ -46,6 +46,7 @@
 	import { loadMap, map } from '../../store/mapStore';
 	import { resetViewport } from '../../store/viewport';
 	import { domainMaxOf } from '../../layout/scales';
+	import { applyEstimationModeAfterImport, estimationMode, estimationRange } from '../../store/settings';
 	import { displayNameOf } from '../FeatureList/listing';
 	import { evaluateImportText, replaceNeedsConfirmation } from './importPreview';
 
@@ -136,12 +137,16 @@
 	}
 
 	/** Übernimmt eine geprüfte Karte (FR-61/FR-62): ersetzt den Bestand über `loadMap()`
-	 * (hebt Selektion und Verbindungsvorgang selbst auf), setzt den Ausschnitt zurück (F-18,
-	 * Abschnitt "Verhalten": "Nach der Übernahme wird der Ausschnitt zurückgesetzt") und schließt
-	 * den Dialog. */
+	 * (hebt Selektion und Verbindungsvorgang selbst auf), wendet den automatischen Moduswechsel
+	 * aus F-26 an (features/F-26-schaetzmodus.md, Abschnitt "Automatischer Wechsel beim Import";
+	 * PRD FR-08, AK-19 — vor domainMaxOf() unten, weil dessen Untergrenze im Modus 'free' vom
+	 * dabei ggf. gewechselten Schätzmodus abhängt), setzt den Ausschnitt zurück (F-18, Abschnitt
+	 * "Verhalten": "Nach der Übernahme wird der Ausschnitt zurückgesetzt") und schließt den
+	 * Dialog. */
 	function applyImport(next: FeatureMap): void {
 		loadMap(next);
-		resetViewport(domainMaxOf(next));
+		applyEstimationModeAfterImport(next);
+		resetViewport(domainMaxOf(next, $estimationMode, $estimationRange));
 		dialogEl?.close();
 	}
 

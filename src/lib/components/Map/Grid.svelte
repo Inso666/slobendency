@@ -11,9 +11,13 @@
 	festen [0, domainMax] und rendert bei jeder Änderung neu. effortMin/effortMax und
 	impactMin/impactMax sind getrennt, weil centerEffort/centerImpact unabhängig voneinander
 	verschoben sein können — x- und y-Teilstriche werden deshalb je Achse eigenständig berechnet.
+
+	F-26 · Schätzmodus (features/F-26-schaetzmodus.md, Abschnitt „Umfang"): liest estimationMode/
+	estimationRange direkt aus src/lib/store/settings.ts, siehe Axes.svelte.
 -->
 <script lang="ts">
 	import { PLOT, ticksOf, xOf, yOf } from '../../layout/scales';
+	import { estimationMode, estimationRange } from '../../store/settings';
 
 	let {
 		effortMin,
@@ -22,8 +26,8 @@
 		impactMax
 	}: { effortMin: number; effortMax: number; impactMin: number; impactMax: number } = $props();
 
-	let xTicks = $derived(ticksOf(effortMin, effortMax));
-	let yTicks = $derived(ticksOf(impactMin, impactMax));
+	let xTicks = $derived(ticksOf(effortMin, effortMax, $estimationMode, $estimationRange));
+	let yTicks = $derived(ticksOf(impactMin, impactMax, $estimationMode, $estimationRange));
 </script>
 
 {#each xTicks as value (`x-${value}`)}
