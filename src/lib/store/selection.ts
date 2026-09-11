@@ -37,27 +37,11 @@ export const highlightMode: Writable<'direct' | 'transitive'> = writable('transi
  * Hervorhebung: abgedunkelt (Klasse `.dim`, Standard) oder vollständig ausgeblendet. Wie
  * highlightMode ein reiner, dauerhafter Anzeige-Umschalter ohne eigene Fachlogik — unabhängig
  * von selectedId und highlightMode (FR-47: „ein weiterer, unabhängiger Umschalter"), von
- * clearSelection() und handleEscape() unberührt.
- *
- * Platzhalter des Test-Agenten (CLAUDE.md, Abschnitt „Regeln für den Test-Agenten": „Rümpfe …
- * throw new Error('not implemented') werfen bzw. bei einem Store einen Platzhalter ohne
- * Funktionslogik"). Ein Store hat keinen Funktionsrumpf, der wie bei einer Funktion werfen
- * könnte — subscribe/set/update stehen hier stellvertretend dafür: jeder Zugriff wirft, bis der
- * Feature-Agent eine echte Store-Implementierung einsetzt (z. B.
- * `writable<HighlightVisibility>('dim')`).
+ * clearSelection() und handleEscape() unberührt. Startwert 'dim' (F-24-Akzeptanzkriterien:
+ * „Standardzustand ist Abdunkeln").
  */
 export type HighlightVisibility = 'dim' | 'hide';
-export const highlightVisibility: Writable<HighlightVisibility> = {
-	subscribe(): () => void {
-		throw new Error('not implemented');
-	},
-	set(): void {
-		throw new Error('not implemented');
-	},
-	update(): void {
-		throw new Error('not implemented');
-	}
-};
+export const highlightVisibility: Writable<HighlightVisibility> = writable('dim');
 
 /** Startfeature eines laufenden Verbindungsvorgangs (PRD FR-11 bis FR-14), oder null ohne
  * laufenden Vorgang. */

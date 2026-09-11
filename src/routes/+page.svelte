@@ -71,13 +71,27 @@
 	Eintrag, weil das Menü bereits hier lebt — derselbe Rückfrage-Dialog wie „Feature löschen"
 	(F-14/F-15, features/STATUS.md, Entscheidung vom 06.09. zu FR-05), hier auf `resetMap()`
 	(src/lib/store/mapStore.ts) angewandt statt auf `deleteFeature`.
+
+	F-24 · Hervorhebung: Abdunkeln oder Ausblenden (features/F-24-hervorhebung-sichtbarkeit.md, PRD
+	FR-47, Abschnitt 6.1): weiterer Umschalter im bereits bestehenden Menü „Ansicht", derselben
+	Bauart wie der Umschalter „Hervorhebung" im Kopfband (`role="group"`, Knöpfe mit `aria-pressed`,
+	gebunden an `highlightVisibility` aus src/lib/store/selection.ts) — festgelegt in
+	features/STATUS.md, Abschnitt „Entscheidungen des Orchestrators" (PRD 1.1, 11.09.): „Einstellungen
+	und der neue Sichtbarkeits-Umschalter hängen am bestehenden Menü Ansicht ▾ statt einer neuen
+	Symbolleisten-Schaltfläche."
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { initTheme, theme, type Theme } from '$lib/store/theme';
 	import { initPersistence } from '$lib/store/persistence';
 	import { map, resetMap, selectedFeature } from '$lib/store/mapStore';
-	import { cancelConnection, connectSource, connectTarget, highlightMode } from '$lib/store/selection';
+	import {
+		cancelConnection,
+		connectSource,
+		connectTarget,
+		highlightMode,
+		highlightVisibility
+	} from '$lib/store/selection';
 	import { domainMaxOf } from '$lib/layout/scales';
 	import { resetViewport } from '$lib/store/viewport';
 	import MapCanvas from '$lib/components/Map/MapCanvas.svelte';
@@ -437,6 +451,28 @@
 						<button type="button" aria-pressed={legendForced} onclick={toggleLegendForced}>
 							Zeichenerklärung
 						</button>
+						<!-- F-24, Abschnitt „Darstellung": „Zweiter, unabhängiger Umschalter
+							Abdunkeln/Ausblenden neben dem Umschalter nur direkte/transitiv aus F-11,
+							gleiche Bauart." Bleibt das Menü nach dem Umschalten offen — anders als bei
+							„Zeichenerklärung" oben — weil es sich, wie der Tafel-/Hintergrund-Umschalter im
+							Menü „Exportieren", um einen dauerhaften Schalter handelt, nicht um eine
+							einmalige Aktion. -->
+						<span class="sw" role="group" aria-label="Sichtbarkeit nicht beteiligter Elemente">
+							<button
+								type="button"
+								aria-pressed={$highlightVisibility === 'dim'}
+								onclick={() => highlightVisibility.set('dim')}
+							>
+								Abdunkeln
+							</button>
+							<button
+								type="button"
+								aria-pressed={$highlightVisibility === 'hide'}
+								onclick={() => highlightVisibility.set('hide')}
+							>
+								Ausblenden
+							</button>
+						</span>
 					</div>
 				{/if}
 			</div>

@@ -21,6 +21,14 @@
 	Hervorhebung oder Hover eingeblendet (FR-45) — Hover ist reiner Anzeigezustand dieser
 	Komponente, keine Fachregel.
 
+	F-24 · Hervorhebung: Abdunkeln oder Ausblenden (features/F-24-hervorhebung-sichtbarkeit.md,
+	Abschnitt „Umfang"; PRD FR-43, FR-47): Zusätzlich zu `highlight` wird `highlightVisibility`
+	aus src/lib/store/selection.ts geprüft. Bei `'hide'` erhalten nicht beteiligte Kanten (samt
+	ihrer Trefferfläche), Beschriftungen, Vorbedingungsringe und Durchstreichungen das native
+	Attribut `hidden` statt (nur) der Klasse `.dim` — vollständig aus der Darstellung entfernt
+	(PRD, Abschnitt 5.6 „Visuelle Kodierung", Zeile „Ausgeblendetes Element"). Bei `'dim'`
+	(Standard) bleibt das Verhalten aus F-11 unverändert.
+
 	F-17 · Beziehungen bearbeiten und löschen (features/F-17-beziehungen-pflegen.md, Abschnitt
 	"Umfang"/Absatz zur Trefferfläche): Jede Kante trägt `data-relation-from`/`-to`/`-type`, über
 	die MapCanvas.svelte einen Rechtsklick anywhere im SVG der richtigen Beziehung zuordnet —
@@ -37,6 +45,7 @@
 	import { highlight, relationKey } from '../../store/highlight';
 	import { cycles } from '../../store/cycles';
 	import { isOnCycle } from '../../graph/cycles';
+	import { highlightVisibility } from '../../store/selection';
 
 	/** Dauer eines Long-Press bis zum Öffnen des Beziehungsmenüs (F-17, Absatz zur
 	 * Trefferfläche: "Auf Touchgeräten öffnet Long-Press ... dasselbe Menü"); dieselbe Frist wie
@@ -126,6 +135,7 @@
 		{@const key = relationKey(g.relation)}
 		{@const isHighlighted = $highlight !== null && $highlight.relations.has(key)}
 		{@const isDimmed = $highlight !== null && !isHighlighted}
+		{@const isHidden = isDimmed && $highlightVisibility === 'hide'}
 		{@const showLabel = isHighlighted || hoveredKey === key}
 		{@const isCyclic = isOnCycle($cycles, g.relation)}
 		<g
@@ -133,6 +143,7 @@
 			data-relation-from={g.relation.from}
 			data-relation-to={g.relation.to}
 			data-relation-type={g.relation.type}
+			hidden={isHidden ? true : undefined}
 			ontouchstart={(event) => startLongPress(event, g.relation)}
 			ontouchend={cancelLongPress}
 			ontouchmove={cancelLongPress}
@@ -141,7 +152,7 @@
 			<line
 				data-testid="edge-{g.relation.from}-{g.relation.to}-{g.relation.type}"
 				class="edge {EDGE_CLASS[g.relation.type]}"
-				class:dim={isDimmed}
+				class:dim={isDimmed && !isHidden}
 				class:cyclic={isCyclic}
 				x1={g.x1}
 				y1={g.y1}
@@ -175,6 +186,7 @@
 				data-testid="edge-label-{g.relation.from}-{g.relation.to}-{g.relation.type}"
 				class="edge-label"
 				style:visibility={showLabel ? 'visible' : 'hidden'}
+				hidden={isHidden ? true : undefined}
 				x={g.labelX}
 				y={g.labelY}
 				text-anchor={g.labelAnchor}
@@ -187,7 +199,8 @@
 			<g
 				data-testid="edge-crossmark-{g.relation.from}-{g.relation.to}"
 				class="crossmark"
-				class:dim={isDimmed}
+				class:dim={isDimmed && !isHidden}
+				hidden={isHidden ? true : undefined}
 				transform="rotate({g.crossMark.angle} {g.crossMark.x} {g.crossMark.y})"
 			>
 				<line
@@ -209,11 +222,13 @@
 	{#each ringTargets as id (id)}
 		{@const p = placementById.get(id)}
 		{@const isDimmed = $highlight !== null && !$highlight.features.has(id)}
+		{@const isHidden = isDimmed && $highlightVisibility === 'hide'}
 		{#if p}
 			<circle
 				data-testid="edge-ring-{id}"
 				class="ring"
-				class:dim={isDimmed}
+				class:dim={isDimmed && !isHidden}
+				hidden={isHidden ? true : undefined}
 				cx={p.x}
 				cy={p.y}
 				r={RING_RADIUS}
@@ -224,11 +239,13 @@
 	{#each strikeTargets as id (id)}
 		{@const p = placementById.get(id)}
 		{@const isDimmed = $highlight !== null && !$highlight.features.has(id)}
+		{@const isHidden = isDimmed && $highlightVisibility === 'hide'}
 		{#if p}
 			<line
 				data-testid="edge-strike-{id}"
 				class="strike"
-				class:dim={isDimmed}
+				class:dim={isDimmed && !isHidden}
+				hidden={isHidden ? true : undefined}
 				x1={p.x - STRIKE_HALF}
 				y1={p.y + STRIKE_HALF}
 				x2={p.x + STRIKE_HALF}
@@ -295,5 +312,13 @@
 	.strike.dim,
 	.crossmark.dim {
 		opacity: var(--dim-opacity);
+	}
+	/* F-24, Abschnitt „Darstellung": bei highlightVisibility "hide" tragen nicht beteiligte Kanten
+	   (samt Trefferfläche), Beschriftungen, Vorbedingungsringe und Durchstreichungen das native
+	   Attribut `hidden` — Chromiums Standard-Stylblatt setzt `[hidden] { display: none }` nur für
+	   Elemente im HTML-Namensraum, nicht für SVG (siehe FeatureNodes.svelte), deshalb hier
+	   ausdrücklich nachgezogen. */
+	[hidden] {
+		display: none;
 	}
 </style>

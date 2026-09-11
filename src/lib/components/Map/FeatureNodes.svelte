@@ -10,6 +10,14 @@
 	und src/lib/store/selection.ts ab (F-11) — die Regel, was hervorgehoben wird, ist bereits
 	dort entschieden; hier wird nur gezeichnet.
 
+	F-24 · Hervorhebung: Abdunkeln oder Ausblenden (features/F-24-hervorhebung-sichtbarkeit.md,
+	Abschnitt „Umfang"; PRD FR-43, FR-47): Zusätzlich zu `highlight` wird `highlightVisibility`
+	aus src/lib/store/selection.ts geprüft. Bei `'hide'` erhalten nicht beteiligte Signaturpunkte
+	und ihre Trefferflächen das native Attribut `hidden` statt (nur) der Klasse `.dim` — vollständig
+	aus der Darstellung entfernt, ohne Trefferfläche, nicht per Tab erreichbar (PRD, Abschnitt 5.6
+	„Visuelle Kodierung", Zeile „Ausgeblendetes Element"). Bei `'dim'` (Standard) bleibt das
+	Verhalten aus F-11 unverändert.
+
 	F-12 · Zoom und Pan (features/F-12-zoom-pan.md, Abschnitt „Verhalten"): Ein Zug, der auf
 	einem Feature beginnt, verschiebt die Karte nicht, sondern selektiert (dort gilt der Klick
 	der Selektion) — Maus- und Touch-Beginn stoppen ihre Ausbreitung deshalb hier, bevor
@@ -51,7 +59,7 @@
 	import { PLOT } from '../../layout/scales';
 	import type { Feature, FeatureId, FeatureMap } from '../../model/types';
 	import { highlight } from '../../store/highlight';
-	import { connectSource, selectedId } from '../../store/selection';
+	import { connectSource, highlightVisibility, selectedId } from '../../store/selection';
 	import { panBy } from '../../store/viewport';
 	import { hitAreaRadiusForScale } from '../../interaction/hitArea';
 	import { exceedsLongPressDragThreshold } from '../../interaction/longPress';
@@ -300,6 +308,8 @@
 	reinen Trefferkreis (außerhalb jeder sichtbaren Signatur) genauso zu behandeln ist. -->
 <g class="hitareas">
 	{#each placements as placement (placement.id)}
+		{@const isDimmed = $highlight !== null && !$highlight.features.has(placement.id)}
+		{@const isHidden = isDimmed && $highlightVisibility === 'hide'}
 		<circle
 			class="hitarea"
 			data-testid="feature-hitarea-{placement.id}"
@@ -307,6 +317,7 @@
 			cy={placement.y}
 			r={hitAreaRadius}
 			pointer-events="all"
+			hidden={isHidden ? true : undefined}
 			onclick={(event) => selectFeature(event, placement.id)}
 			onmousedown={stopDragStart}
 			ontouchstart={(event) => stopTouchDragStart(event, placement.id)}
@@ -342,12 +353,14 @@
 		{@const flipLeft = nearRightEdge(placement.x)}
 		{@const isSelected = placement.id === $selectedId}
 		{@const isDimmed = $highlight !== null && !$highlight.features.has(placement.id)}
+		{@const isHidden = isDimmed && $highlightVisibility === 'hide'}
 		{@const isConnectStart = placement.id === $connectSource}
 		<g
 			class="node"
 			class:sel={isSelected}
-			class:dim={isDimmed}
+			class:dim={isDimmed && !isHidden}
 			data-feature-id={placement.id}
+			hidden={isHidden ? true : undefined}
 			onclick={(event) => selectFeature(event, placement.id)}
 			onmousedown={stopDragStart}
 			ontouchstart={(event) => stopTouchDragStart(event, placement.id)}
@@ -460,6 +473,14 @@
 	/* Abgedunkelte Features bleiben sichtbar, treten aber deutlich zurück (FR-43). */
 	.node.dim {
 		opacity: var(--dim-opacity);
+	}
+	/* F-24, Abschnitt „Darstellung": bei highlightVisibility "hide" tragen nicht beteiligte
+	   Signaturpunkte und Trefferflächen das native Attribut `hidden` — Chromiums Standard-Stylblatt
+	   setzt `[hidden] { display: none }` nur für Elemente im HTML-Namensraum, nicht für SVG
+	   (geprüft: ein bloßes `hidden` auf `<g>`/`<circle>` bleibt ohne diese Regel sichtbar), deshalb
+	   hier ausdrücklich nachgezogen. */
+	[hidden] {
+		display: none;
 	}
 	.anchor {
 		stroke: var(--ink-soft);

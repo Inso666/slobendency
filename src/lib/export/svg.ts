@@ -257,13 +257,24 @@ export function buildExportSvg(source: SVGSVGElement, options?: ExportOptions): 
 		for (const selected of Array.from(clone.querySelectorAll('.sel'))) {
 			selected.classList.remove('sel');
 		}
+		// F-24 · Hervorhebung: Abdunkeln oder Ausblenden (features/F-24-hervorhebung-sichtbarkeit.md,
+		// PRD FR-47): bei highlightVisibility "hide" tragen nicht beteiligte Elemente das native
+		// Attribut `hidden` statt (nur) der Klasse `.dim` (FeatureNodes.svelte, Edges.svelte) — im
+		// neutralen Export (FR-67) genauso zurückzunehmen wie `.dim` oben, sonst bliebe ein Element
+		// unsichtbar, das der neutrale Zustand gerade wieder zeigen soll.
+		for (const hidden of Array.from(clone.querySelectorAll('[hidden]'))) {
+			hidden.removeAttribute('hidden');
+		}
 	}
 	// Kantenbeschriftungen einer beschrifteten Beziehung werden unabhängig von keepSelection
 	// sichtbar gesetzt (F-20, Ablauf Schritt 4) — sie existieren im DOM nur, wenn die Beziehung
 	// überhaupt eine Beschriftung trägt (Edges.svelte), ihre Sichtbarkeit hängt sonst allein vom
 	// aktuellen Bildschirmzustand (Hervorhebung/Hover, FR-45) ab, den der Export nicht übernimmt.
+	// Dasselbe gilt seit F-24 für das Attribut `hidden` (highlightVisibility "hide") — auch mit
+	// keepSelection bleibt eine beschriftete Beziehung im Export lesbar.
 	for (const label of Array.from(clone.querySelectorAll('.edge-label'))) {
 		label.removeAttribute('style');
+		label.removeAttribute('hidden');
 	}
 
 	// Schritt 5 + 6: eingebettete Stile mit aufgelösten Token und websicheren Font-Stacks.
