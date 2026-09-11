@@ -18,13 +18,15 @@
 	„Visuelle Kodierung", Zeile „Ausgeblendetes Element"). Bei `'dim'` (Standard) bleibt das
 	Verhalten aus F-11 unverändert.
 
-	F-12 · Zoom und Pan (features/F-12-zoom-pan.md, Abschnitt „Verhalten"): Ein Zug, der auf
-	einem Feature beginnt, verschiebt die Karte nicht, sondern selektiert (dort gilt der Klick
-	der Selektion) — Maus- und Touch-Beginn stoppen ihre Ausbreitung deshalb hier, bevor
-	MapCanvas.svelte sie als Ziehen auf freier Fläche werten könnte. Punktradius und
-	Schriftgrößen werden gegen den Maßstab gerechnet, damit sie bei Maßstab 0,5 nicht unter die
-	geforderte Mindestschriftgröße von 9 px fallen, bei größerem Maßstab aber regulär mit
-	skalieren (F-12, Abschnitt „Verhalten").
+	F-25 · Datenzoom (features/F-25-datenzoom.md, Abschnitt „Umfang", „Verhalten"): ersetzt die
+	F-12-Zoom-Mechanik vollständig. Ein Zug, der auf einem Feature beginnt, verschiebt den
+	Ausschnitt nicht, sondern selektiert (dort gilt der Klick der Selektion) — Maus- und
+	Touch-Beginn stoppen ihre Ausbreitung deshalb hier, bevor MapCanvas.svelte sie als Ziehen auf
+	freier Fläche werten könnte. Anders als in F-12 bleiben Punktradius und Schriftgrößen bei
+	jedem Zoomstand bildschirmkonstant (kein Herunter-/Hochrechnen mehr gegen einen Maßstab) —
+	effortMin/effortMax/impactMin/impactMax (aus src/lib/store/viewport.ts, über MapCanvas.svelte)
+	bestimmen nur noch die *Position* der Signaturen im sichtbaren Fenster, über
+	src/lib/layout/jitter.ts.
 
 	F-16 · Kontextmenü und Verbindungsvorgang (features/F-16-verbindungsvorgang.md, Abschnitt
 	„Ablauf" Schritt 1): Jeder Signaturpunkt trägt `data-feature-id`, über das
@@ -48,21 +50,24 @@
 	fängt Rundungsfehler der CTM-Messung ab. Bewegt sich ein laufender Long-Press-Druck um mehr
 	als `LONG_PRESS_DRAG_THRESHOLD_PX` (`exceedsLongPressDragThreshold()`,
 	src/lib/interaction/longPress.ts), bricht der Timer ab und die Bewegung verschiebt
-	stattdessen die Karte (`panBy`, src/lib/store/viewport.ts) — über dieselbe
-	Bildschirm-zu-Inhaltsraum-Umrechnung (`toContentPoint`, als Prop von MapCanvas.svelte
-	durchgereicht), die MapCanvas.svelte für sein eigenes Ziehen auf freier Fläche verwendet, kein
-	zweiter Mechanismus (features/README.md, Leitplanke 3). Bleibt die Bewegung unter der
-	Schwelle, läuft der Long-Press-Timer unverändert weiter (Zittern ist kein Drag).
+	stattdessen den Ausschnitt (`centerOn`, src/lib/store/viewport.ts, über
+	src/lib/interaction/pan.ts — F-25, Abschnitt „Umfang": „kein gesondertes panBy() mehr") —
+	über dieselbe Bildschirm-zu-Inhaltsraum-Umrechnung (`toContentPoint`, als Prop von
+	MapCanvas.svelte durchgereicht) und dieselbe Wertebereichs-Umrechnung (effortAtX/impactAtY,
+	src/lib/layout/scales.ts), die MapCanvas.svelte für sein eigenes Ziehen auf freier Fläche
+	verwendet, kein zweiter Mechanismus (features/README.md, Leitplanke 3). Bleibt die Bewegung
+	unter der Schwelle, läuft der Long-Press-Timer unverändert weiter (Zittern ist kein Drag).
 -->
 <script lang="ts">
 	import { placeFeatures, type Placement } from '../../layout/jitter';
-	import { PLOT } from '../../layout/scales';
+	import { PLOT, effortAtX, impactAtY } from '../../layout/scales';
 	import type { Feature, FeatureId, FeatureMap } from '../../model/types';
 	import { highlight } from '../../store/highlight';
 	import { connectSource, highlightVisibility, selectedId } from '../../store/selection';
-	import { panBy } from '../../store/viewport';
+	import { centerOn, viewport } from '../../store/viewport';
 	import { hitAreaRadiusForScale } from '../../interaction/hitArea';
 	import { exceedsLongPressDragThreshold } from '../../interaction/longPress';
+	import { panTarget } from '../../interaction/pan';
 
 	/** Radius des Halo-Kreises um das selektierte Feature (F-11, Abschnitt „Darstellung"). */
 	const HALO_RADIUS = 15;
@@ -79,15 +84,24 @@
 	let {
 		map,
 		domainMax,
-		scale = 1,
+		effortMin,
+		effortMax,
+		impactMin,
+		impactMax,
 		pxPerUnit = 1,
 		toContentPoint,
 		onLongPress
 	}: {
 		map: FeatureMap;
 		domainMax: number;
-		scale?: number;
-		/** CSS-Pixel je Karten-Inhaltseinheit bei Maßstab 1 (MapCanvas.svelte, gemessen über
+		/** Sichtbares Fenster je Achse (F-25 · features/F-25-datenzoom.md, Abschnitt „Umfang"),
+		 * aus src/lib/store/viewport.ts über MapCanvas.svelte — bestimmt die Position, nicht die
+		 * Größe, der Signaturen (siehe Modulkommentar). */
+		effortMin: number;
+		effortMax: number;
+		impactMin: number;
+		impactMax: number;
+		/** CSS-Pixel je Karten-Inhaltseinheit (MapCanvas.svelte, gemessen über
 		 * `getScreenCTM()` der äußeren `<svg>`) — F-22, Grundlage der tatsächlichen
 		 * Bildschirmgröße der Trefferfläche. */
 		pxPerUnit?: number;
@@ -102,31 +116,24 @@
 	} = $props();
 
 	/** Trefferkreis-Radius in Karten-Inhaltseinheiten (F-22, Abschnitt „Trefferflächen"; UI-16):
-	 * die reine Umrechnung aus dem aktuellen Maßstab (hitAreaRadiusForScale, geht von einer
-	 * Inhaltseinheit ≈ einem Bildschirmpixel bei Maßstab 1 aus), zusätzlich durch `pxPerUnit`
-	 * auf die tatsächlich gerenderte Größe der äußeren `<svg>` umgerechnet, mit einem kleinen
-	 * Sicherheitsaufschlag gegen Rundungsfehler der CTM-Messung. */
+	 * die reine Umrechnung bei Grundmaßstab (F-25 entfernt jede Bildskalierung, siehe
+	 * Modulkommentar — hitAreaRadiusForScale() bekommt deshalb immer 1), zusätzlich durch
+	 * `pxPerUnit` auf die tatsächlich gerenderte Größe der äußeren `<svg>` umgerechnet, mit einem
+	 * kleinen Sicherheitsaufschlag gegen Rundungsfehler der CTM-Messung. */
 	const HIT_AREA_SAFETY_MARGIN = 1.05;
 	let hitAreaRadius = $derived(
-		(hitAreaRadiusForScale(scale) / Math.max(pxPerUnit, 0.0001)) * HIT_AREA_SAFETY_MARGIN
+		(hitAreaRadiusForScale(1) / Math.max(pxPerUnit, 0.0001)) * HIT_AREA_SAFETY_MARGIN
 	);
 
-	/** Radius des Signaturpunkts (F-09, Abschnitt „Darstellung"). */
+	/** Radius des Signaturpunkts — bildschirmkonstant bei jedem Zoomstand (F-25, Abschnitt
+	 * „Verhalten"; F-09, Abschnitt „Darstellung"). */
 	const NODE_RADIUS = 8;
 
-	/** Schriftgröße des Feature-Namens bei Maßstab 1 (F-09, Abschnitt „Darstellung"). */
+	/** Schriftgröße des Feature-Namens — bildschirmkonstant (F-25, Abschnitt „Verhalten"; F-09,
+	 * Abschnitt „Darstellung"). */
 	const LABEL_FONT_SIZE = 13;
-	/** Schriftgröße der Lotung bei Maßstab 1 (F-09, Abschnitt „Darstellung"). */
+	/** Schriftgröße der Lotung — bildschirmkonstant (F-25, Abschnitt „Verhalten"). */
 	const LOTUNG_FONT_SIZE = 10.5;
-	/** Mindestschriftgröße auf dem Bildschirm, unabhängig vom Maßstab (F-12, Abschnitt
-	 * „Verhalten"). */
-	const MIN_SCREEN_FONT_SIZE = 9;
-
-	/** Faktor, der Punktradius und Schriftgrößen gegen den Maßstab rechnet: oberhalb der
-	 * Schwelle, ab der Maßstab 1 bereits genügend Bildschirmgröße liefert, bleibt er 1 (reguläre
-	 * Skalierung mit dem Zoom); darunter — auf dem Weg zu MIN_SCALE — wächst er gerade so, dass
-	 * die Bildschirmschriftgröße nie unter MIN_SCREEN_FONT_SIZE fällt. */
-	let sizeFactor = $derived(Math.max(1, MIN_SCREEN_FONT_SIZE / (LABEL_FONT_SIZE * scale)));
 
 	/** Halbe Länge des Ankerkreuzes — 10 Einheiten Gesamtlänge (F-09, Abschnitt „Darstellung"). */
 	const ANCHOR_HALF_LENGTH = 5;
@@ -144,7 +151,9 @@
 	 */
 	const RIGHT_EDGE_THRESHOLD = PLOT.left + 0.82 * (PLOT.right - PLOT.left);
 
-	let placements = $derived(placeFeatures(map, domainMax));
+	let placements = $derived(
+		placeFeatures(map, domainMax, effortMin, effortMax, impactMin, impactMax)
+	);
 
 	function featureOf(id: FeatureId): Feature {
 		const feature = map.features.find((candidate) => candidate.id === id);
@@ -222,11 +231,21 @@
 	 * Drag. */
 	let touchStartPoint: { x: number; y: number } | null = null;
 
-	/** Ursprung eines laufenden Long-Press-Drags im unskalierten Inhaltsraum von VIEWBOX/PLOT
-	 * (`toContentPoint()`), gesetzt sobald die 10-px-Schwelle überschritten wird und bei jeder
-	 * weiteren Bewegung aktualisiert — dasselbe Verfahren wie MapCanvas.svelte's eigenes Ziehen
-	 * auf freier Fläche (F-22). */
-	let dragOrigin: { x: number; y: number } | null = null;
+	/** Wertepunkt (effort/impact), der beim Überschreiten der 10-px-Schwelle unter dem Finger lag
+	 * und für die Dauer des Zugs unverändert bleibt (F-25, Abschnitt „Umfang": centerOn() statt
+	 * eines gesonderten panBy(), siehe src/lib/interaction/pan.ts) — dasselbe Verfahren wie
+	 * MapCanvas.svelte's eigenes Ziehen auf freier Fläche (F-22). */
+	let dragOrigin: { effort: number; impact: number } | null = null;
+
+	/** Wandelt eine Bildschirmposition über toContentPoint() (PLOT-Pixelraum) in den Wertebereich
+	 * des aktuell sichtbaren Fensters um (F-25) — dieselbe Umrechnung wie in MapCanvas.svelte. */
+	function toValuePoint(clientX: number, clientY: number): { effort: number; impact: number } {
+		const { x, y } = toContentPoint(clientX, clientY);
+		return {
+			effort: effortAtX(x, effortMin, effortMax),
+			impact: impactAtY(y, impactMin, impactMax)
+		};
+	}
 
 	/** True, sobald eine laufende Berührung als Drag statt als Long-Press gilt (F-22, Abschnitt
 	 * „Trefferflächen": „Bewegt sich der Finger … um mehr als 10 px, gilt es als Drag") —
@@ -275,14 +294,16 @@
 			if (!exceedsLongPressDragThreshold(dx, dy)) return;
 			dragging = true;
 			cancelLongPress();
-			dragOrigin = toContentPoint(touchStartPoint.x, touchStartPoint.y);
+			dragOrigin = toValuePoint(touchStartPoint.x, touchStartPoint.y);
 		}
 
 		event.stopPropagation();
 		event.preventDefault();
-		const point = toContentPoint(touch.clientX, touch.clientY);
-		if (dragOrigin) panBy(point.x - dragOrigin.x, point.y - dragOrigin.y);
-		dragOrigin = point;
+		if (dragOrigin) {
+			const point = toValuePoint(touch.clientX, touch.clientY);
+			const next = panTarget(dragOrigin, point, $viewport);
+			centerOn(next.centerEffort, next.centerImpact);
+		}
 	}
 
 	/** Beendet einen laufenden Touch (Loslassen oder Abbrechen) — setzt sowohl den Long-Press- als
@@ -374,7 +395,7 @@
 					data-testid="feature-halo-{placement.id}"
 					cx={placement.x}
 					cy={placement.y}
-					r={HALO_RADIUS * sizeFactor}
+					r={HALO_RADIUS}
 				/>
 			{/if}
 			{#if isConnectStart}
@@ -385,21 +406,22 @@
 					data-testid="connect-start-{placement.id}"
 					cx={placement.x}
 					cy={placement.y}
-					r={CONNECT_START_RADIUS * sizeFactor}
+					r={CONNECT_START_RADIUS}
 				/>
 			{/if}
 			<circle
 				data-testid="feature-node-{placement.id}"
+				class:dim={isDimmed && !isHidden}
 				cx={placement.x}
 				cy={placement.y}
-				r={NODE_RADIUS * sizeFactor}
+				r={NODE_RADIUS}
 			/>
 			<text
 				data-testid="feature-label-{placement.id}"
 				x={placement.x + (flipLeft ? -LABEL_OFFSET_X : LABEL_OFFSET_X)}
 				y={placement.y + LABEL_OFFSET_Y}
 				text-anchor={flipLeft ? 'end' : 'start'}
-				style:font-size="{LABEL_FONT_SIZE * sizeFactor}px"
+				style:font-size="{LABEL_FONT_SIZE}px"
 			>
 				{labelOf(feature)}
 			</text>
@@ -408,7 +430,7 @@
 				data-testid="feature-lotung-{placement.id}"
 				x={placement.x + LABEL_OFFSET_X}
 				y={placement.y + LOTUNG_OFFSET_Y}
-				style:font-size="{LOTUNG_FONT_SIZE * sizeFactor}px"
+				style:font-size="{LOTUNG_FONT_SIZE}px"
 			>
 				{lotungOf(feature)}
 			</text>

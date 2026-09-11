@@ -6,11 +6,13 @@
 	(Importieren, Exportieren, …) sind nicht Teil dieses Features und folgen in späteren
 	Features.
 
-	F-12 · Zoom und Pan (features/F-12-zoom-pan.md, Abschnitt „Verhalten", Zeile
-	„Zurücksetzen"): Knopf „Ansicht" öffnet ein Menü mit „Ganze Karte zeigen", das den
-	Ausschnitt zurücksetzt (design/03-seekarte.html zeigt „Ansicht" bereits als eigenen Knopf im
-	Kopfband, neben den — hier noch nicht umgesetzten — Knöpfen „Importieren" und „Exportieren"
-	späterer Features).
+	F-25 · Datenzoom (features/F-25-datenzoom.md, Abschnitt „Verhalten", Zeile „Zurücksetzen";
+	ersetzt die F-12-Zoom-Mechanik vollständig): Knopf „Ansicht" öffnet ein Menü mit „Ganze Karte
+	zeigen", das den Ausschnitt zurücksetzt (design/03-seekarte.html zeigt „Ansicht" bereits als
+	eigenen Knopf im Kopfband, neben den — hier noch nicht umgesetzten — Knöpfen „Importieren" und
+	„Exportieren" späterer Features). Der Ausschnitt startet synchron beim Seitenaufbau in der
+	Vollansicht des tatsächlichen domainMax (resetViewport(domainMaxOf($map)) unten), damit nach
+	jedem Neuladen wieder die Vollansicht aktiv ist (F-25-AK).
 
 	F-14 · Verzeichnis (features/F-14-verzeichnis.md): Knopf „Verzeichnis" im Kopfband klappt das
 	Panel auf und zu (FR-50, standardmäßig eingeklappt); `aria-pressed` spiegelt den Zustand wie
@@ -81,7 +83,7 @@
 	Symbolleisten-Schaltfläche."
 -->
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { initTheme, theme, type Theme } from '$lib/store/theme';
 	import { initPersistence } from '$lib/store/persistence';
 	import { map, resetMap, selectedFeature } from '$lib/store/mapStore';
@@ -93,7 +95,7 @@
 		highlightVisibility
 	} from '$lib/store/selection';
 	import { domainMaxOf } from '$lib/layout/scales';
-	import { resetViewport } from '$lib/store/viewport';
+	import { resetViewport, viewport } from '$lib/store/viewport';
 	import MapCanvas from '$lib/components/Map/MapCanvas.svelte';
 	import FeatureModal from '$lib/components/FeatureModal/FeatureModal.svelte';
 	import FeatureList from '$lib/components/FeatureList/FeatureList.svelte';
@@ -115,6 +117,13 @@
 	// gespeicherte Bestand vor dem ersten Rendern der Karte wiederhergestellt ist.
 	initPersistence();
 
+	// F-25 · Datenzoom (features/F-25-datenzoom.md, Abschnitt „Akzeptanzkriterien": „Nach einem
+	// Neuladen ist wieder die Vollansicht aktiv"): einmalig beim Aufbau der Seite, mit dem
+	// tatsächlichen domainMax des wiederhergestellten Bestands — nicht reaktiv bei jeder
+	// domainMax-Änderung, sonst risse ein wachsendes domainMax (neues Feature über 21) den
+	// Ausschnitt mitten in der Sitzung wieder auf.
+	resetViewport(domainMaxOf($map));
+
 	onMount(() => {
 		initTheme();
 	});
@@ -125,7 +134,7 @@
 
 	let domainMax = $derived(domainMaxOf($map));
 
-	/** Menü „Ansicht" im Kopfband (F-12, Abschnitt „Verhalten", Zeile „Zurücksetzen"). */
+	/** Menü „Ansicht" im Kopfband (F-25, Abschnitt „Verhalten", Zeile „Zurücksetzen"). */
 	let viewMenuOpen = $state(false);
 
 	function toggleViewMenu(): void {
@@ -133,7 +142,7 @@
 	}
 
 	function showWholeMap(): void {
-		resetViewport();
+		resetViewport(domainMax);
 		viewMenuOpen = false;
 	}
 
@@ -225,12 +234,39 @@
 		return document.querySelector<SVGSVGElement>('svg.map');
 	}
 
+	/**
+	 * FR-65 (unverändert, F-20/F-21 — „Nicht Teil dieses Features" laut F-25): der Bildexport
+	 * umfasst immer die vollständige Karte, unabhängig vom Zoom-Ausschnitt. Vor F-25 galt das
+	 * automatisch, weil der Ausschnitt nur eine `transform`-Gruppe um ansonsten unveränderte,
+	 * auf den vollen Wertebereich projizierte Koordinaten legte (buildExportSvg() entfernte diese
+	 * Gruppe vor dem Messen der Bounding Box). Seit F-25 tragen die gerenderten Koordinaten
+	 * (Feature-Signaturen, Teilstriche, Raster, Reviere) das sichtbare Fenster bereits selbst —
+	 * es gibt keine wegnehmbare Transformation mehr. Der Export setzt den Ausschnitt deshalb hier
+	 * kurz auf die Vollansicht zurück, bevor er das aktuell gerenderte SVG (`currentMapSvg()`)
+	 * ausliest, und stellt den vorherigen Ausschnitt danach wieder her — `tick()` sorgt dafür,
+	 * dass die Karte zwischen den beiden Zustandswechseln tatsächlich neu gerendert hat, bevor
+	 * geklont/gemessen wird.
+	 */
+	async function withFullMapView<T>(action: () => T | Promise<T>): Promise<T> {
+		const previous = $viewport;
+		resetViewport(domainMax);
+		await tick();
+		try {
+			return await action();
+		} finally {
+			viewport.set(previous);
+			await tick();
+		}
+	}
+
 	/** Eintrag „Als SVG" im Menü „Exportieren" (F-20, Abschnitt „Umfang": FR-63). */
-	function exportAsSvg(): void {
+	async function exportAsSvg(): Promise<void> {
 		exportMenuOpen = false;
-		const svgEl = currentMapSvg();
-		if (!svgEl) return;
-		downloadSvg(svgEl, { theme: svgExportTheme });
+		await withFullMapView(() => {
+			const svgEl = currentMapSvg();
+			if (!svgEl) return;
+			downloadSvg(svgEl, { theme: svgExportTheme });
+		});
 	}
 
 	/** F-21, Abschnitt „Umfang": „Das Menü Exportieren → Als Bild bietet den Faktor als drei
@@ -252,15 +288,17 @@
 	let pngExportError = $state('');
 
 	async function exportAsPng(scale: PngScale): Promise<void> {
-		const svgEl = currentMapSvg();
-		if (!svgEl) return;
 		pngExportError = '';
 		pngExporting = scale;
 		try {
-			await downloadPng(svgEl, {
-				scale,
-				theme: svgExportTheme,
-				transparent: pngTransparentBackground
+			await withFullMapView(async () => {
+				const svgEl = currentMapSvg();
+				if (!svgEl) return;
+				await downloadPng(svgEl, {
+					scale,
+					theme: svgExportTheme,
+					transparent: pngTransparentBackground
+				});
 			});
 		} catch {
 			pngExportError = 'Der PNG-Export ist fehlgeschlagen. Bitte erneut versuchen.';
@@ -642,7 +680,7 @@
 			onEdit={editFeatureFromDirectory}
 			onEditRelation={openChangeRelation}
 			onCreateFeature={openCreateModalFromContextMenu}
-			onShowWholeMap={() => resetViewport()}
+			onShowWholeMap={() => resetViewport(domainMax)}
 		/>
 	{/if}
 

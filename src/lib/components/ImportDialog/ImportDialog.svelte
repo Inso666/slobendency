@@ -45,6 +45,7 @@
 	import type { FeatureMap } from '../../model/types';
 	import { loadMap, map } from '../../store/mapStore';
 	import { resetViewport } from '../../store/viewport';
+	import { domainMaxOf } from '../../layout/scales';
 	import { displayNameOf } from '../FeatureList/listing';
 	import { evaluateImportText, replaceNeedsConfirmation } from './importPreview';
 
@@ -140,7 +141,7 @@
 	 * den Dialog. */
 	function applyImport(next: FeatureMap): void {
 		loadMap(next);
-		resetViewport();
+		resetViewport(domainMaxOf(next));
 		dialogEl?.close();
 	}
 

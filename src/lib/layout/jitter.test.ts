@@ -29,7 +29,7 @@ function sameValueGroup(n: number, impact = 5, effort = 5, prefix = 'f'): Featur
 }
 
 function anchorOf(impact: number, effort: number): { x: number; y: number } {
-	return { x: xOf(effort, DOMAIN_MAX), y: yOf(impact, DOMAIN_MAX) };
+	return { x: xOf(effort, 0, DOMAIN_MAX), y: yOf(impact, 0, DOMAIN_MAX) };
 }
 
 function distance(a: { x: number; y: number }, b: { x: number; y: number }): number {

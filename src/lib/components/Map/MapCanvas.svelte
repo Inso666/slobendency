@@ -20,15 +20,22 @@
 	Klick daneben — auf Reviere, Raster, Kanten oder die Kartenfläche selbst — hebt die
 	Selektion deshalb hier auf.
 
-	F-12 · Zoom und Pan (features/F-12-zoom-pan.md, Abschnitt „Umfang"): Der Ausschnitt aus
-	src/lib/store/viewport.ts wird als `transform`-Gruppe um den bereits vorhandenen Inhalt
-	gelegt; die viewBox selbst bleibt für den späteren Bildexport unverändert (FR-65). Mausrad
-	zoomt auf den Zeiger, Ziehen auf freier Fläche verschiebt (Ziehen, das auf einem Feature
-	beginnt, stoppt seine Ausbreitung bereits in FeatureNodes.svelte und erreicht diese
-	Komponente nie). Pinch- und Ein-Finger-Touch-Gesten bilden dieselben zwei Operationen über
-	Touch nach (UI-14). Bildschirmkoordinaten (Zeiger, Finger) werden über die CTM der äußeren
-	`<svg>` — also unabhängig vom inneren Zoom/Pan-`transform` — in den unskalierten
-	Koordinatenraum von VIEWBOX/PLOT umgerechnet, in dem viewport.ts rechnet.
+	F-25 · Datenzoom (features/F-25-datenzoom.md, Abschnitt „Umfang"): ersetzt die F-12-Zoom-
+	Mechanik vollständig. Der Ausschnitt aus src/lib/store/viewport.ts wirkt nicht mehr als
+	`transform`-Gruppe um den gerenderten Inhalt, sondern als veränderter Eingabebereich der
+	Skalenfunktionen aus scales.ts: Regions/Grid/Axes/FeatureNodes lesen effortMin/effortMax/
+	impactMin/impactMax (unten aus `$viewport` abgeleitet) und rendern bei jeder Änderung neu; die
+	viewBox selbst bleibt dabei unverändert (FR-65, unverändert gegenüber F-12). Mausrad zoomt auf
+	den Zeiger, Ziehen auf freier Fläche verschiebt (Ziehen, das auf einem Feature beginnt, stoppt
+	seine Ausbreitung bereits in FeatureNodes.svelte und erreicht diese Komponente nie). Pinch- und
+	Ein-Finger-Touch-Gesten bilden dieselben zwei Operationen über Touch nach (UI-14). Bildschirm-
+	koordinaten (Zeiger, Finger) werden über die CTM der äußeren `<svg>` in den unskalierten
+	Koordinatenraum von VIEWBOX/PLOT umgerechnet (`toContentPoint`) und von dort über
+	effortAtX()/impactAtY() (scales.ts) in den Wertebereich, in dem zoomAt()/centerOn() rechnen
+	(F-25, Abschnitt „Verhalten": „Zoom auf den Zeiger zentriert" — der Wertepunkt unter dem
+	Zeiger, nicht nur seine Bildposition, bleibt an Ort und Stelle). Punkt- und Schriftgrößen
+	skalieren nicht mehr mit dem Zoom (F-25, Abschnitt „Verhalten": „bildschirmkonstant") — die
+	Trefferfläche (F-22) rechnet deshalb mit Grundmaßstab 1 statt mit einem Zoomfaktor.
 
 	F-16 · Kontextmenü und Verbindungsvorgang (features/F-16-verbindungsvorgang.md, Abschnitt
 	„Ablauf" Schritt 1; Absatz nach „Fachregeln"): Rechtsklick auf die Karte — ein Feature oder
@@ -72,12 +79,13 @@
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { VIEWBOX } from '../../layout/scales';
+	import { VIEWBOX, effortAtX, impactAtY } from '../../layout/scales';
 	import { placeFeatures } from '../../layout/jitter';
 	import type { FeatureId, FeatureMap, Relation } from '../../model/types';
 	import { clearSelection, handleEscape } from '../../store/selection';
-	import { panBy, viewport, zoomAt } from '../../store/viewport';
-import { hitAreaRadiusForScale } from '../../interaction/hitArea';
+	import { centerOn, viewport, zoomAt } from '../../store/viewport';
+	import { hitAreaRadiusForScale } from '../../interaction/hitArea';
+	import { panTarget } from '../../interaction/pan';
 	import Regions from './Regions.svelte';
 	import Grid from './Grid.svelte';
 	import Axes from './Axes.svelte';
@@ -111,7 +119,17 @@ import { hitAreaRadiusForScale } from '../../interaction/hitArea';
 		onContextMenu(x, y, { kind: 'relation', relation });
 	}
 
-	let placements = $derived(placeFeatures(map, domainMax));
+	/** Sichtbares Fenster je Achse (F-25 · features/F-25-datenzoom.md, Abschnitt „Umfang"),
+	 * abgeleitet aus src/lib/store/viewport.ts — effort/impact sind getrennt, weil
+	 * centerEffort/centerImpact unabhängig voneinander verschoben sein können. */
+	let effortMin = $derived($viewport.centerEffort - $viewport.visibleRange / 2);
+	let effortMax = $derived($viewport.centerEffort + $viewport.visibleRange / 2);
+	let impactMin = $derived($viewport.centerImpact - $viewport.visibleRange / 2);
+	let impactMax = $derived($viewport.centerImpact + $viewport.visibleRange / 2);
+
+	let placements = $derived(
+		placeFeatures(map, domainMax, effortMin, effortMax, impactMin, impactMax)
+	);
 
 	let svgEl: SVGSVGElement | undefined;
 
@@ -134,13 +152,16 @@ import { hitAreaRadiusForScale } from '../../interaction/hitArea';
 	}
 
 	/** Empfindlichkeit des Mausrads: ein Rad-Ereignis mit deltaY=240 (eine „Rastung" in den
-	 * meisten Browsern) ergibt einen Faktor von e^(240·0,0015) ≈ 1,43 (F-12, Zeile „Zoom"). */
+	 * meisten Browsern) verkleinert visibleRange um den Faktor e^(-240·0,0015) ≈ 0,70 (F-25,
+	 * Abschnitt „Verhalten": Scrollen nach oben/weg verkleinert visibleRange, zoomt also hinein —
+	 * umgekehrtes Vorzeichen zum F-12-Vorgänger, dessen `scale` größer wurde, je näher man
+	 * heranzoomte). */
 	const WHEEL_SENSITIVITY = 0.0015;
 
 	/** Rechnet eine Bildschirmposition (z. B. MouseEvent.clientX/Y) in den unskalierten
-	 * Koordinatenraum von VIEWBOX/PLOT um — die CTM der äußeren `<svg>` selbst ist von deren
-	 * eigener viewBox/preserveAspectRatio-Skalierung abhängig, nicht vom inneren Zoom/Pan-
-	 * `transform` (siehe Modulkommentar in src/lib/store/viewport.ts). */
+	 * Koordinatenraum von VIEWBOX/PLOT um — die CTM der äußeren `<svg>` ist von deren eigener
+	 * viewBox/preserveAspectRatio-Skalierung abhängig, nicht vom sichtbaren Wertefenster (F-25:
+	 * es gibt keine Bildtransformation mehr, siehe Modulkommentar). */
 	function toContentPoint(clientX: number, clientY: number): { x: number; y: number } {
 		if (!svgEl) return { x: clientX, y: clientY };
 		const ctm = svgEl.getScreenCTM();
@@ -152,31 +173,45 @@ import { hitAreaRadiusForScale } from '../../interaction/hitArea';
 		return { x: transformed.x, y: transformed.y };
 	}
 
-	function handleWheel(event: WheelEvent): void {
-		event.preventDefault();
-		const { x, y } = toContentPoint(event.clientX, event.clientY);
-		const factor = Math.exp(-event.deltaY * WHEEL_SENSITIVITY);
-		zoomAt(x, y, factor);
+	/** Rechnet eine Bildschirmposition weiter in den Wertebereich des aktuell sichtbaren Fensters
+	 * um (F-25, Abschnitt „Verhalten") — über toContentPoint() (PLOT-Pixelraum) und
+	 * effortAtX()/impactAtY() (src/lib/layout/scales.ts, die algebraische Umkehrung von
+	 * xOf()/yOf()). */
+	function toValuePoint(clientX: number, clientY: number): { effort: number; impact: number } {
+		const { x, y } = toContentPoint(clientX, clientY);
+		return {
+			effort: effortAtX(x, effortMin, effortMax),
+			impact: impactAtY(y, impactMin, impactMax)
+		};
 	}
 
-	/** Ursprung des laufenden Ein-Finger-/Maus-Zugs, im Koordinatenraum von toContentPoint(),
-	 * oder null ohne laufenden Zug. */
-	let dragOrigin: { x: number; y: number } | null = null;
+	function handleWheel(event: WheelEvent): void {
+		event.preventDefault();
+		const { effort, impact } = toValuePoint(event.clientX, event.clientY);
+		const deltaFactor = Math.exp(event.deltaY * WHEEL_SENSITIVITY);
+		zoomAt(deltaFactor, effort, impact, domainMax);
+	}
+
+	/** Wertepunkt (effort/impact), der beim Beginn eines Zugs auf freier Fläche unter dem Zeiger
+	 * lag und für dessen gesamte Dauer unverändert bleibt (F-25, Abschnitt „Umfang": centerOn()
+	 * statt eines gesonderten panBy(), siehe src/lib/interaction/pan.ts), oder `null` ohne
+	 * laufenden Zug. */
+	let dragOrigin: { effort: number; impact: number } | null = null;
 
 	/** Bildschirmabstand der beiden Finger bei der letzten Pinch-Messung, oder null ohne
-	 * laufende Pinch-Geste (F-12, Zeile „Zoom", Spalte Mobil). */
+	 * laufende Pinch-Geste (F-25, Abschnitt „Verhalten", Spalte Mobil). */
 	let pinchDistance: number | null = null;
 
 	function handleMouseDown(event: MouseEvent): void {
 		if (event.button !== 0) return;
-		dragOrigin = toContentPoint(event.clientX, event.clientY);
+		dragOrigin = toValuePoint(event.clientX, event.clientY);
 	}
 
 	function handleMouseMove(event: MouseEvent): void {
 		if (!dragOrigin) return;
-		const point = toContentPoint(event.clientX, event.clientY);
-		panBy(point.x - dragOrigin.x, point.y - dragOrigin.y);
-		dragOrigin = point;
+		const point = toValuePoint(event.clientX, event.clientY);
+		const next = panTarget(dragOrigin, point, $viewport);
+		centerOn(next.centerEffort, next.centerImpact);
 	}
 
 	function endDrag(): void {
@@ -193,7 +228,7 @@ import { hitAreaRadiusForScale } from '../../interaction/hitArea';
 
 	function handleTouchStart(event: TouchEvent): void {
 		if (event.touches.length === 1) {
-			dragOrigin = toContentPoint(event.touches[0].clientX, event.touches[0].clientY);
+			dragOrigin = toValuePoint(event.touches[0].clientX, event.touches[0].clientY);
 			pinchDistance = null;
 		} else if (event.touches.length === 2) {
 			pinchDistance = touchDistance(event.touches[0], event.touches[1]);
@@ -204,16 +239,16 @@ import { hitAreaRadiusForScale } from '../../interaction/hitArea';
 	function handleTouchMove(event: TouchEvent): void {
 		if (event.touches.length === 1 && dragOrigin) {
 			event.preventDefault();
-			const point = toContentPoint(event.touches[0].clientX, event.touches[0].clientY);
-			panBy(point.x - dragOrigin.x, point.y - dragOrigin.y);
-			dragOrigin = point;
+			const point = toValuePoint(event.touches[0].clientX, event.touches[0].clientY);
+			const next = panTarget(dragOrigin, point, $viewport);
+			centerOn(next.centerEffort, next.centerImpact);
 		} else if (event.touches.length === 2 && pinchDistance !== null) {
 			event.preventDefault();
 			const [a, b] = [event.touches[0], event.touches[1]];
 			const newDistance = touchDistance(a, b);
 			const mid = touchMidpoint(a, b);
-			const { x, y } = toContentPoint(mid.x, mid.y);
-			zoomAt(x, y, newDistance / pinchDistance);
+			const { effort, impact } = toValuePoint(mid.x, mid.y);
+			zoomAt(pinchDistance / newDistance, effort, impact, domainMax);
 			pinchDistance = newDistance;
 		}
 	}
@@ -223,7 +258,7 @@ import { hitAreaRadiusForScale } from '../../interaction/hitArea';
 			dragOrigin = null;
 			pinchDistance = null;
 		} else if (event.touches.length === 1) {
-			dragOrigin = toContentPoint(event.touches[0].clientX, event.touches[0].clientY);
+			dragOrigin = toValuePoint(event.touches[0].clientX, event.touches[0].clientY);
 			pinchDistance = null;
 		}
 	}
@@ -238,7 +273,7 @@ import { hitAreaRadiusForScale } from '../../interaction/hitArea';
 	 * ein Rechtsklick genau auf den Ankerpunkt eines Features sonst nicht zuverlässig dieses
 	 * Feature, sondern ein zufällig darüberliegendes. */
 	function nearestFeatureWithinHitArea(contentX: number, contentY: number): FeatureId | null {
-		const radius = hitAreaRadiusForScale($viewport.scale) / Math.max(screenPxPerUnit, 0.0001);
+		const radius = hitAreaRadiusForScale(1) / Math.max(screenPxPerUnit, 0.0001);
 		let nearestId: FeatureId | null = null;
 		let nearestDistance = Infinity;
 		for (const placement of placements) {
@@ -364,20 +399,24 @@ import { hitAreaRadiusForScale } from '../../interaction/hitArea';
 		</pattern>
 	</defs>
 
-	<g transform="translate({$viewport.x} {$viewport.y}) scale({$viewport.scale})">
-		<Regions {domainMax} />
-		<Grid {domainMax} />
-		<Axes {domainMax} />
-		<Edges {map} {placements} onLongPress={handleEdgeLongPress} />
-		<FeatureNodes
-			{map}
-			{domainMax}
-			scale={$viewport.scale}
-			pxPerUnit={screenPxPerUnit}
-			{toContentPoint}
-			onLongPress={handleFeatureContextMenu}
-		/>
-	</g>
+	<!-- F-25, Abschnitt „Umfang": keine `transform`-Gruppe mehr um den Inhalt — Regions/Grid/Axes/
+		FeatureNodes berechnen ihre Koordinaten direkt aus dem sichtbaren Fenster (Datenzoom statt
+		Bildskalierung). -->
+	<Regions {domainMax} {effortMin} {effortMax} {impactMin} {impactMax} />
+	<Grid {effortMin} {effortMax} {impactMin} {impactMax} />
+	<Axes {effortMin} {effortMax} {impactMin} {impactMax} />
+	<Edges {map} {placements} onLongPress={handleEdgeLongPress} />
+	<FeatureNodes
+		{map}
+		{domainMax}
+		{effortMin}
+		{effortMax}
+		{impactMin}
+		{impactMax}
+		pxPerUnit={screenPxPerUnit}
+		{toContentPoint}
+		onLongPress={handleFeatureContextMenu}
+	/>
 </svg>
 
 <Legend forced={legendForced} />

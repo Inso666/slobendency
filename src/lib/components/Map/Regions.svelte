@@ -6,12 +6,32 @@
 	kommen aus regionRects() (src/lib/layout/scales.ts), Klassennamen und Token aus
 	design/03-seekarte.html. Reviername steht mittig im Revier (F-08, Abschnitt
 	„Darstellung"), oben 34 px unter der Rahmenkante, unten 20 px darüber.
+
+	F-25 · Datenzoom (features/F-25-datenzoom.md, Abschnitt „Umfang"): liest das sichtbare
+	Fenster aus src/lib/store/viewport.ts (über den Aufrufer, MapCanvas.svelte) und rendert bei
+	jeder Änderung neu — die Reviergrenze selbst bleibt ein Datenwert bei domainMax / 2
+	(unverändert gegenüber F-08), nur ihre Bildschirmposition folgt dem aktuellen Ausschnitt,
+	damit Raster und Reviere beim Zoomen deckungsgleich bleiben. effortMin/effortMax und
+	impactMin/impactMax sind getrennt, weil centerEffort/centerImpact unabhängig voneinander
+	verschoben sein können.
 -->
 <script lang="ts">
 	import { regionRects } from '../../layout/scales';
 	import type { Quadrant } from '../../model/types';
 
-	let { domainMax }: { domainMax: number } = $props();
+	let {
+		domainMax,
+		effortMin,
+		effortMax,
+		impactMin,
+		impactMax
+	}: {
+		domainMax: number;
+		effortMin: number;
+		effortMax: number;
+		impactMin: number;
+		impactMax: number;
+	} = $props();
 
 	const REGION_CLASS: Record<Quadrant, string> = {
 		quickWins: 'r-qw',
@@ -29,7 +49,7 @@
 
 	const TOP_ROW = new Set<Quadrant>(['quickWins', 'grosseVorhaben']);
 
-	let rects = $derived(regionRects(domainMax));
+	let rects = $derived(regionRects(domainMax, effortMin, effortMax, impactMin, impactMax));
 
 	function labelY(rect: { y: number; height: number }, quadrant: Quadrant): number {
 		return TOP_ROW.has(quadrant) ? rect.y + 34 : rect.y + rect.height - 20;

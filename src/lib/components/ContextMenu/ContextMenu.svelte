@@ -99,7 +99,7 @@
 		 * Anlegemodus wie der Kopfband-Knopf "+ Feature". */
 		onCreateFeature: () => void;
 		/** "Ganze Karte zeigen" auf freier Fläche — derselbe Vorgang wie im Menü "Ansicht"
-		 * (F-12, resetViewport() aus src/lib/store/viewport.ts). */
+		 * (F-25, resetViewport() aus src/lib/store/viewport.ts, ersetzt die F-12-Zoom-Mechanik). */
 		onShowWholeMap: () => void;
 	} = $props();
 

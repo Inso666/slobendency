@@ -241,6 +241,16 @@ export function buildExportSvg(source: SVGSVGElement, options?: ExportOptions): 
 	// sonst durchweg eine leere Box. Der Messcontainer bleibt außerhalb des sichtbaren Bereichs
 	// und wird nach der Messung sofort wieder entfernt, bevor irgendetwas anderes am Klon
 	// geschieht.
+	//
+	// Gemessen wird stets der Klon als Ganzes (`clone.getBBox()`), nicht mehr nur seine direkten
+	// `<g>`-Kindknoten (`topGroups`): Seit F-25 · features/F-25-datenzoom.md liegt der
+	// Karteninhalt nicht mehr vollständig in der einen `<g transform="…">`-Gruppe aus F-12 — die
+	// jetzt fensterbasiert rechnenden Komponenten Regions.svelte, Grid.svelte und Axes.svelte
+	// (F-25, Abschnitt „Umfang") rendern ihre Rechtecke/Linien/Texte als eigene Geschwister direkt
+	// unter dem `<svg>`-Wurzelelement, nicht in einer umschließenden Gruppe. Eine auf `topGroups`
+	// beschränkte Messung ließe diese Elemente unberücksichtigt und lieferte eine zu kleine
+	// Bounding Box (Verstoß gegen FR-65, „vollständige Map"). `clone.getBBox()` erfasst dagegen
+	// grundsätzlich alle gerenderten Nachfahren, unabhängig von ihrer Gruppierung.
 	const measureHost = document.createElement('div');
 	measureHost.setAttribute(
 		'style',
@@ -249,7 +259,7 @@ export function buildExportSvg(source: SVGSVGElement, options?: ExportOptions): 
 	measureHost.setAttribute('aria-hidden', 'true');
 	document.body.appendChild(measureHost);
 	measureHost.appendChild(clone);
-	const bbox = unionBBox(topGroups.length > 0 ? topGroups : [clone]);
+	const bbox = unionBBox([clone]);
 	document.body.removeChild(measureHost);
 	const viewBoxX = bbox.x - VIEWBOX_MARGIN;
 	const viewBoxY = bbox.y - VIEWBOX_MARGIN;
