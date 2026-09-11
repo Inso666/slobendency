@@ -126,12 +126,29 @@ async function hasHorizontalOverflow(page: Page): Promise<boolean> {
 
 /** Öffnet das Anlegeformular über den Kopfband-Knopf "+ Feature" (F-13) und legt ein Feature mit
  * dem übergebenen Anzeigenamen an (Kennung wird automatisch aus dem Namen abgeleitet, F-13,
- * slugify()). */
-async function createFeature(page: Page, label: string): Promise<void> {
+ * slugify()). `score` wählt optional die Nutzen-/Aufwand-Knöpfe im Formular (F-13, `NUTZEN`/
+ * `AUFWAND`-Gruppen) — ohne Angabe bleibt es beim Fibonacci-Startwert 1/1 (FeatureModal.svelte).
+ * Wird für zwei Features im selben Test mit unterschiedlichem `score` aufgerufen, damit sie nach
+ * dem F-09-Jitter an sichtbar unterschiedlichen Punkten liegen (siehe Aufrufer unten). */
+async function createFeature(
+	page: Page,
+	label: string,
+	score?: { impact: number; effort: number }
+): Promise<void> {
 	await page.getByRole('button', { name: '+ Feature' }).click();
 	const dialog = page.getByRole('dialog', { name: 'Feature anlegen' });
 	await expect(dialog).toBeVisible();
 	await dialog.getByLabel('Anzeigename').fill(label);
+	if (score) {
+		await dialog
+			.getByRole('group', { name: 'Nutzen' })
+			.getByRole('button', { name: String(score.impact), exact: true })
+			.click();
+		await dialog
+			.getByRole('group', { name: 'Aufwand' })
+			.getByRole('button', { name: String(score.effort), exact: true })
+			.click();
+	}
 	await dialog.getByRole('button', { name: 'Speichern' }).click();
 	await expect(dialog).toHaveCount(0);
 }
@@ -275,8 +292,12 @@ test.describe('F-22 · Responsives Verhalten und Touch', () => {
 				await seedMap(page, []);
 				await page.goto('/');
 
-				await createFeature(page, 'Feature A');
-				await createFeature(page, 'Feature B');
+				// Unterschiedlicher Nutzen/Aufwand, damit beide Features nach dem F-09-Jitter an
+				// sichtbar unterschiedlichen Punkten liegen statt beim gemeinsamen Fibonacci-
+				// Startwert 1/1 praktisch aufeinanderzufallen (sonst schlägt der anschließende
+				// Rechtsklick-Verbindungsablauf auf das jeweils andere Feature fehl).
+				await createFeature(page, 'Feature A', { impact: 3, effort: 2 });
+				await createFeature(page, 'Feature B', { impact: 13, effort: 8 });
 				await expect(page.getByTestId('feature-node-feature-a')).toBeVisible();
 				await expect(page.getByTestId('feature-node-feature-b')).toBeVisible();
 
@@ -322,7 +343,8 @@ test.describe('F-22 · Responsives Verhalten und Touch', () => {
 				const exportText = await exportDialog.getByRole('textbox').inputValue();
 				expect(exportText).toContain('feature-a');
 				expect(exportText).toContain('feature-b');
-				expect(exportText).toContain('requires');
+				// PRD 4.2: „benötigt" wird im DSL-Export als Pfeil `-->` abgebildet, nie als Wort.
+				expect(exportText).toContain('-->');
 				await page.keyboard.press('Escape');
 				await expect(page.getByRole('dialog')).toHaveCount(0);
 			});
@@ -385,8 +407,17 @@ test.describe('F-22 · Responsives Verhalten und Touch', () => {
 			await page.getByRole('button', { name: 'Importieren' }).click();
 			const importDialog = page.getByRole('dialog', { name: 'Karte importieren' });
 			await expect(importDialog).toBeVisible();
-			await importDialog.getByLabel('Dokument').fill('feature neu impact=8 effort=13\n');
+			// Gültiges DSL-Dokument nach PRD 4.2 (Kopfzeile "featuremap v1", feature_def-Syntax
+			// "<id> :: impact=<n>, effort=<n>"), wie e2e/F-18-import.spec.ts es verwendet.
+			await importDialog.getByLabel('Dokument').fill('featuremap v1\nneu :: impact=8, effort=13\n');
 			await importDialog.getByRole('button', { name: 'Übernehmen' }).click();
+			// Die Karte ist an dieser Stelle nicht leer (Feature "a" existiert weiterhin) —
+			// FR-62/replaceNeedsConfirmation() verlangt deshalb die Rückfrage "Bestehende Karte
+			// ersetzen?" vor der eigentlichen Übernahme (ImportDialog.svelte).
+			await page
+				.getByRole('alertdialog', { name: 'Bestehende Karte ersetzen?' })
+				.getByRole('button', { name: 'Ersetzen' })
+				.click();
 			await expect(importDialog).toHaveCount(0);
 			await expect(page.getByTestId('feature-node-neu')).toBeVisible();
 		});
