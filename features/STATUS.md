@@ -358,6 +358,12 @@ kein Quellwiderspruch, sondern jeweils ein Versehen im Test selbst:
 Der QA-Agent für F-26 setzt alle drei Korrekturen mechanisch um (keine neue Prüfabsicht) und
 prüft danach die volle Suite erneut.
 
+**Nachtrag (11.09.):** Korrektur 3 oben schlug `Unveraendert` (großes U) als Ersatz vor, der
+bestehende Selektor in Zeile ~296 lautet aber `openEditModal(page, 'unveraendert')`
+(kleingeschrieben) — vor der Korrektur unsichtbar, weil das Dokument wegen „ä" ohnehin nie
+geparst wurde. Gleiche Art von Versehen wie Korrektur 2. Freigegeben: Kennung im Importtext auf
+`unveraendert` (klein) setzen, passend zum bestehenden Selektor. Prüfabsicht unverändert.
+
 ## Sessionprotokoll
 
 Je Session eine Zeile: Datum, geweckt oder manuell gestartet, was erledigt wurde, womit die
