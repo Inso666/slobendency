@@ -31,7 +31,7 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-23 | Fußleiste, Hinweise, Zurücksetzen | fertig | — | gemergt 10.09. 18:12 |
 | F-24 | Hervorhebung: Abdunkeln oder Ausblenden | fertig | — | gemergt 11.09. 19:30 |
 | F-25 | Datenzoom (ersetzt Zoom-Mechanik F-12) | fertig | — | gemergt 12.09. 00:09 |
-| F-26 | Schätzmodus: Fibonacci oder freier Wertebereich | in Arbeit | feature/F-26-schaetzmodus | 32 Unit- und 12 E2E-Tests rot committet (0407df7) |
+| F-26 | Schätzmodus: Fibonacci oder freier Wertebereich | in QA | feature/F-26-schaetzmodus | 569/569 Unit grün; 3 Testfehler in E2E gefunden und freigegeben, QA-Agent behebt |
 
 ## Entscheidungen des Orchestrators
 
@@ -330,6 +330,33 @@ den Beschriftungen *Minimum*/*Maximum* sowie Zahlenfelder *Nutzen*/*Aufwand* im 
 (`getByRole('spinbutton', { name: 'Nutzen' | 'Aufwand' })`), als Kartusche über die Token aus
 `app.css` wie das Feature-Formular aus F-13. Feature- und QA-Agent bauen/prüfen gegen diesen
 Kontrakt.
+
+**Drei Testfehler in `e2e/F-26-schaetzmodus.spec.ts` (11.09.).** Der Feature-Agent für F-26 hat
+drei Zusicherungen als fehlerhaft gemeldet, ohne sie zu ändern. Alle drei geprüft und bestätigt,
+kein Quellwiderspruch, sondern jeweils ein Versehen im Test selbst:
+
+1. Zeile 183 („Kernablauf") und Zeile 218 („…übernimmt einen Wert innerhalb 0–100") lesen
+   `localStorage` unmittelbar nach Klick auf „Speichern", ohne die aus F-04 bekannte
+   400-ms-Schreibverzögerung (`DEBOUNCE_MS`, `src/lib/store/persistence.ts`) abzuwarten —
+   dasselbe, bereits mehrfach aufgetretene Muster (siehe Entscheidung „Debounce-Race im
+   Löschtest von F-15", 06.09.). `e2e/F-18-import.spec.ts` löst dieselbe Situation bereits über
+   `expect.poll(...)`. Freigegeben: beide Stellen auf `expect.poll` mit einer Zeitspanne größer
+   als 400 ms umstellen, Prüfabsicht und Erwartungswerte unverändert.
+2. Zeile 265 importiert die Kennung `Abweichend` (großgeschrieben), öffnet das Bearbeiten-Formular
+   aber über `openEditModal(page, 'abweichend')` (kleingeschrieben). Der DSL-Tokenizer
+   (`src/lib/dsl/tokenizer.ts`, `WORD_CHAR = /[A-Za-z0-9_-]/`) unterscheidet Groß-/Kleinschreibung
+   und normalisiert nicht — die Kennung bleibt `Abweichend`, `feature-node-abweichend` existiert
+   nie. Freigegeben: beide Stellen auf dieselbe Schreibweise bringen (z. B. Kennung im
+   Importtext klein schreiben, wie im übrigen Testbestand üblich).
+3. Zeile 286 verwendet die Kennung `Unverändert`, die mit „ä" ein nach PRD 4.2/`WORD_CHAR`
+   (ASCII `[A-Za-z0-9_-]`) unzulässiges Zeichen enthält — bindend bereits mit der
+   Kennung-Zeichensatz-Entscheidung vom 05.09. festgelegt. Der Parser weist das Dokument ab,
+   „Übernehmen" bleibt dauerhaft deaktiviert. Freigegeben: Kennung durch eine zulässige ASCII-Form
+   ersetzen (z. B. `Unveraendert`), Prüfabsicht (Feature ohne abweichenden Wert löst keinen
+   Moduswechsel aus) unverändert.
+
+Der QA-Agent für F-26 setzt alle drei Korrekturen mechanisch um (keine neue Prüfabsicht) und
+prüft danach die volle Suite erneut.
 
 ## Sessionprotokoll
 
