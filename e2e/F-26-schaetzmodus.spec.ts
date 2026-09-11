@@ -199,6 +199,14 @@ test.describe('F-26 · Schätzmodus', () => {
 
 		await expect(page.getByRole('dialog')).toHaveCount(0);
 		await expect(page.getByTestId('feature-node-freier-wert')).toBeVisible();
+
+		// F-04: Persistenz schreibt erst nach der Bündelungsfrist DEBOUNCE_MS (400 ms).
+		await expect
+			.poll(
+				async () => (await readStoredMap(page)).features.find((f) => f.id === 'freier-wert')?.impact,
+				{ timeout: 2000 }
+			)
+			.toBe(42);
 		const stored = await readStoredMap(page);
 		const gespeichert = stored.features.find((f) => f.id === 'freier-wert');
 		expect(gespeichert?.impact).toBe(42);
@@ -235,8 +243,14 @@ test.describe('F-26 · Schätzmodus', () => {
 		await modal.getByRole('button', { name: 'Speichern' }).click();
 
 		await expect(page.getByRole('dialog')).toHaveCount(0);
-		const stored = await readStoredMap(page);
-		expect(stored.features.find((f) => f.id === 'im-bereich')?.impact).toBe(64);
+
+		// F-04: Persistenz schreibt erst nach der Bündelungsfrist DEBOUNCE_MS (400 ms).
+		await expect
+			.poll(
+				async () => (await readStoredMap(page)).features.find((f) => f.id === 'im-bereich')?.impact,
+				{ timeout: 2000 }
+			)
+			.toBe(64);
 	});
 
 	// AK: „Ändern des Bereichs (z. B. auf 0–50) wirkt sofort auf neu geöffnete Formulare."
@@ -272,7 +286,7 @@ test.describe('F-26 · Schätzmodus', () => {
 		const importDialog = page.getByRole('dialog', { name: 'Karte importieren' });
 		await importDialog
 			.getByRole('textbox')
-			.fill('featuremap v1\n\nAbweichend :: impact=45, effort=5\n');
+			.fill('featuremap v1\n\nabweichend :: impact=45, effort=5\n');
 		await importDialog.getByRole('button', { name: 'Übernehmen' }).click();
 		await expect(page.getByRole('dialog')).toHaveCount(0);
 
@@ -293,7 +307,7 @@ test.describe('F-26 · Schätzmodus', () => {
 		const importDialog = page.getByRole('dialog', { name: 'Karte importieren' });
 		await importDialog
 			.getByRole('textbox')
-			.fill('featuremap v1\n\nUnverändert :: impact=13, effort=8\n');
+			.fill('featuremap v1\n\nUnveraendert :: impact=13, effort=8\n');
 		await importDialog.getByRole('button', { name: 'Übernehmen' }).click();
 		await expect(page.getByRole('dialog')).toHaveCount(0);
 
