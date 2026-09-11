@@ -30,7 +30,7 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-22 | Responsives Verhalten und Touch | fertig | — | gemergt 11.09. 14:31 |
 | F-23 | Fußleiste, Hinweise, Zurücksetzen | fertig | — | gemergt 10.09. 18:12 |
 | F-24 | Hervorhebung: Abdunkeln oder Ausblenden | fertig | — | gemergt 11.09. 19:30 |
-| F-25 | Datenzoom (ersetzt Zoom-Mechanik F-12) | in QA | feature/F-25-datenzoom | 537/537 Unit grün; 2 Testfehler in E2E gefunden und freigegeben, QA-Agent behebt |
+| F-25 | Datenzoom (ersetzt Zoom-Mechanik F-12) | fertig | — | gemergt 12.09. 00:09 |
 | F-26 | Schätzmodus: Fibonacci oder freier Wertebereich | offen | — | PRD 1.1, 11.09.; hängt an F-25 |
 
 ## Entscheidungen des Orchestrators
