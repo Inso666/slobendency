@@ -30,7 +30,7 @@ Zustandswechsel fort. Zustände: `offen`, `in Tests`, `in Arbeit`, `in QA`, `fer
 | F-22 | Responsives Verhalten und Touch | fertig | — | gemergt 11.09. 14:31 |
 | F-23 | Fußleiste, Hinweise, Zurücksetzen | fertig | — | gemergt 10.09. 18:12 |
 | F-24 | Hervorhebung: Abdunkeln oder Ausblenden | fertig | — | gemergt 11.09. 19:30 |
-| F-25 | Datenzoom (ersetzt Zoom-Mechanik F-12) | in Arbeit | feature/F-25-datenzoom | 32 Unit- (14+18 durch Signaturänderung mit-rot) und 18 E2E-Tests rot committet (b093332) |
+| F-25 | Datenzoom (ersetzt Zoom-Mechanik F-12) | in QA | feature/F-25-datenzoom | 537/537 Unit grün; 2 Testfehler in E2E gefunden und freigegeben, QA-Agent behebt |
 | F-26 | Schätzmodus: Fibonacci oder freier Wertebereich | offen | — | PRD 1.1, 11.09.; hängt an F-25 |
 
 ## Entscheidungen des Orchestrators
@@ -288,6 +288,36 @@ Alle übrigen Aufrufstellen von `viewport.ts` (`MapCanvas.svelte`, `FeatureNodes
 `ContextMenu.svelte`, `FeatureList.svelte`, `ImportDialog.svelte`, `+page.svelte`, `hitArea.ts`)
 sind auf die neue API umzustellen — das ist reguläre Umsetzungsarbeit des Feature-Agenten, keine
 Testfrage.
+
+**Zwei Testfehler durch F-25 aufgedeckt (11.09.).** Der Feature-Agent für F-25 hat zwei
+Zusicherungen als fehlerhaft gemeldet, ohne sie zu ändern. Beide geprüft und bestätigt, kein
+Quellwiderspruch:
+
+1. `e2e/F-14-verzeichnis.spec.ts`, Test „selektiert und zentriert das Feature nach Klick auf
+   einen Eintrag" (FR-54): vergleicht den Bildschirmmittelpunkt der Feature-Signatur mit dem
+   Mittelpunkt der Bounding Box des gesamten `role="img"`-Elements „Streudiagramm" — das ist die
+   volle `VIEWBOX` (1000×700, Mitte 500/350 laut F-08), nicht die `PLOT`-Fläche
+   (80–960 × 40–620, Mitte 520/330). Beide Ränder von `PLOT` zu `VIEWBOX` sind zudem asymmetrisch
+   (links 80/rechts 40, oben 40/unten 80) — die volle Bounding Box war nie ein sinnvoller
+   Bezugspunkt für „die Mitte". PRD FR-54 verlangt „zentriert im Viewport", die Featurebeschreibung
+   „in die Mitte des Ausschnitts" — der Ausschnitt ist laut F-25 exakt das per `xOf`/`yOf` auf
+   `PLOT` abgebildete sichtbare Fenster. Unter dem alten, durch F-25 abgelösten Bildtransformations-
+   Zoom aus F-12 fiel der Unterschied offenbar nicht auf; mit F-25s direkter Fenster-auf-PLOT-
+   Abbildung schlägt die Zusicherung jetzt zuverlässig fehl. Freigegeben: Der Test vergleicht
+   künftig gegen die Bounding Box der Plotfläche (`.frame`, umschließt laut F-08 die Plotfläche)
+   statt der vollen Kartenfläche. Prüfabsicht (Feature landet nach Zentrierung nahe der Mitte des
+   sichtbaren Ausschnitts) und Toleranz bleiben unverändert.
+2. `e2e/F-25-datenzoom.spec.ts`, Test „hält Punktradius und Schriftgröße … bildschirmkonstant":
+   die erste Messung erfolgt unmittelbar nach `page.goto('/')`, bevor die über Google Fonts
+   geladene Schrift „Karla" eingetauscht ist (`display=swap`), wodurch kurzzeitig eine
+   Ausweichschrift mit abweichenden Glyphenmaßen gemessen wird; die zweite Messung nach den
+   Zoom-Interaktionen greift bereits die echte Schrift. Kein Zoom-Fehler, sondern ein fehlendes
+   Warten auf den Schriftartenload in der Testinfrastruktur. Freigegeben: vor der ersten Messung
+   `await page.waitForFunction(() => document.fonts.status === 'loaded')` (oder gleichwertig)
+   einfügen. Prüfabsicht (Punktgröße bleibt bildschirmkonstant) bleibt unverändert.
+
+Der QA-Agent für F-25 setzt beide Korrekturen mechanisch um (keine neue Prüfabsicht) und prüft
+danach die volle Suite erneut.
 
 ## Sessionprotokoll
 
