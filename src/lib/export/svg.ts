@@ -216,6 +216,24 @@ export function buildExportSvg(source: SVGSVGElement, options?: ExportOptions): 
 		hitarea.remove();
 	}
 
+	// F-24 · Hervorhebung: Abdunkeln oder Ausblenden (PRD FR-47, FR-65): das native Attribut
+	// `hidden` (FeatureNodes.svelte, Edges.svelte, gesetzt bei highlightVisibility "hide") trägt
+	// eine `[hidden] { display: none }`-Regel, die das Element für `getBBox()` unsichtbar macht —
+	// ein Element mit `display: none` liefert für eine umschließende Gruppe keinen Beitrag zu
+	// deren Bounding Box. Bliebe das Attribut bis Schritt 4 stehen (dort bisher zusammen mit
+	// `.dim`/`.sel`/`.halo` zurückgenommen), würde die Bounding Box in Schritt 3 zu klein
+	// gemessen: ein zuvor ausgeblendetes, im neutralen Export (keepSelection=false, FR-67) aber
+	// wieder sichtbares Element läge dann außerhalb der bereits fixierten viewBox und würde
+	// abgeschnitten — Verstoß gegen FR-65 „vollständige Map (Bounding Box aller Elemente)".
+	// Deshalb hier, vor der Messung, entfernt statt erst danach; bei `keepSelection` bleiben
+	// ausgeblendete Elemente dagegen weiterhin unsichtbar und damit zu Recht außerhalb der
+	// gemessenen Bounding Box.
+	if (!keepSelection) {
+		for (const hidden of Array.from(clone.querySelectorAll('[hidden]'))) {
+			hidden.removeAttribute('hidden');
+		}
+	}
+
 	// Schritt 3: Bounding Box über alle Elemente plus Rand, unabhängig vom aktuellen Ausschnitt —
 	// getBBox() liefert je Element ohnehin dessen eigene, von seinem `transform` unabhängige
 	// Bounding Box (FR-65). Reale Browser berechnen getBBox() nur für Elemente, die (auch
@@ -260,11 +278,9 @@ export function buildExportSvg(source: SVGSVGElement, options?: ExportOptions): 
 		// F-24 · Hervorhebung: Abdunkeln oder Ausblenden (features/F-24-hervorhebung-sichtbarkeit.md,
 		// PRD FR-47): bei highlightVisibility "hide" tragen nicht beteiligte Elemente das native
 		// Attribut `hidden` statt (nur) der Klasse `.dim` (FeatureNodes.svelte, Edges.svelte) — im
-		// neutralen Export (FR-67) genauso zurückzunehmen wie `.dim` oben, sonst bliebe ein Element
-		// unsichtbar, das der neutrale Zustand gerade wieder zeigen soll.
-		for (const hidden of Array.from(clone.querySelectorAll('[hidden]'))) {
-			hidden.removeAttribute('hidden');
-		}
+		// neutralen Export (FR-67) genauso zurückzunehmen wie `.dim` oben. Die eigentliche Entfernung
+		// geschieht bereits vor Schritt 3 (siehe dortiger Kommentar, FR-65) — hier nur erwähnt, damit
+		// diese Stelle nicht wie ein Aufgabe-vergessen aussieht.
 	}
 	// Kantenbeschriftungen einer beschrifteten Beziehung werden unabhängig von keepSelection
 	// sichtbar gesetzt (F-20, Ablauf Schritt 4) — sie existieren im DOM nur, wenn die Beziehung
