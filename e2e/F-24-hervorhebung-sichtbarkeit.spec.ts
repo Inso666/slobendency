@@ -240,11 +240,11 @@ test.describe('F-24 · Hervorhebung: Abdunkeln oder Ausblenden', () => {
 		await setVisibility(page, 'hide');
 		await expect(page.getByTestId('feature-node-x')).toBeHidden();
 
-		// Nicht klickbar: ein echter Mausklick an der vormaligen Position von X wählt X nicht
-		// aus (kein Halo für X; die Selektion von A bleibt unverändert).
+		// Nicht klickbar: ein echter Mausklick an der vormaligen Position von X trifft freie
+		// Fläche (kein Halo für X) und hebt die Selektion von A entsprechend FR-46 auf.
 		await page.mouse.click(box!.x + box!.width / 2, box!.y + box!.height / 2);
 		await expect(page.getByTestId('feature-halo-x')).toHaveCount(0);
-		await expect(page.getByTestId('feature-halo-a')).toBeVisible();
+		await expect(page.getByTestId('feature-halo-a')).toHaveCount(0);
 
 		// Nicht per Tab erreichbar: ein Fokussierversuch auf die (falls überhaupt noch im DOM
 		// vorhandene) Trefferfläche von X darf nicht greifen.
