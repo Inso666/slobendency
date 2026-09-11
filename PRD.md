@@ -1,9 +1,9 @@
 # Fachspezifikation: Feature Impact/Effort Map
 
 **Dokumenttyp:** Requirements Engineering Document
-**Version:** 1.0
-**Datum:** 04.09.2026
-**Status:** Entwicklungsbereit (MVP)
+**Version:** 1.1
+**Datum:** 11.09.2026
+**Status:** Entwicklungsbereit (Post-MVP-Erweiterung)
 
 ---
 
@@ -31,6 +31,13 @@ Ausdrücklich **nicht** Bestandteil dieser Version:
 - Keine vollständige Roadmap-/Sprint-Planung, keine Termine, keine Kapazitäten
 - Keine Verwaltung mehrerer Maps nebeneinander (nur eine aktive Map)
 - Kein Import aus Jira/Azure DevOps o. ä.
+
+### 1.5 Änderungshistorie
+
+| Version | Datum | Änderung |
+|---|---|---|
+| 1.0 | 04.09.2026 | Erste vollständige Fachspezifikation, MVP (F-01–F-23) |
+| 1.1 | 11.09.2026 | Nicht beteiligte Elemente bei Selektion umschaltbar vollständig ausblendbar statt nur abgedunkelt (FR-47); Zoom als Datenzoom mit live neu berechneten Achsen statt Bildskalierung (FR-25 geändert); freier Schätzmodus mit zentral konfigurierbarem Wertebereich als Alternative zu Fibonacci (FR-08, FR-09, FR-76) |
 
 ---
 
@@ -208,6 +215,8 @@ SSO --x|"inkompatibel"| LegacyAuth
 | FR-05 | Nutzer kann ein Feature löschen. Bestehen Beziehungen, erfolgt eine Rückfrage mit Anzahl der betroffenen Kanten | MUSS |
 | FR-06 | Im Anlege-/Bearbeitungsformular können **direkt Beziehungen zu bereits bekannten Features** definiert werden (Auswahl Zielfeature + Typ + optionales Label) | MUSS |
 | FR-07 | Die ID wird beim Anlegen aus dem Label vorgeschlagen (Slugify), ist aber frei überschreibbar | SOLL |
+| FR-08 | Der Schätzmodus ist umschaltbar zwischen **Fibonacci** (Standard, FR-02) und **Frei**: im freien Modus werden Impact und Effort über ein Zahlenfeld im konfigurierten Wertebereich erfasst statt über die Fibonacci-Auswahl. Enthält ein importiertes Dokument einen Impact- oder Effort-Wert außerhalb der Fibonacci-Reihe, während der Schätzmodus Fibonacci aktiv ist, wechselt die Anwendung nach dem Import automatisch in den freien Modus | MUSS |
+| FR-09 | Der Wertebereich des freien Schätzmodus (Min/Max, **gemeinsam** für Impact und Effort) ist an zentraler Stelle einstellbar; Standardwert 0–100. Ein vorhandener Wert außerhalb des eingestellten Bereichs bleibt nach FR-03 erhalten und wird entsprechend gekennzeichnet, statt den Bereich stillschweigend zu erweitern | MUSS |
 
 ### 5.2 Beziehungs-Verwaltung
 
@@ -230,8 +239,8 @@ SSO --x|"inkompatibel"| LegacyAuth
 | FR-22 | Die Map ist in vier Quadranten unterteilt, jeweils dezent beschriftet | SOLL |
 | FR-23 | Jedes Feature wird als Kreis mit Beschriftung dargestellt | MUSS |
 | FR-24 | Die Map aktualisiert sich **unmittelbar** bei jeder Datenänderung (reaktiv) | MUSS |
-| FR-25 | Zoom und Pan sind möglich (Mausrad/Pinch, Ziehen der Fläche) | SOLL |
-| FR-26 | Die Achsen skalieren automatisch auf den vorhandenen Wertebereich, mindestens jedoch bis 21 | SOLL |
+| FR-25 | Zoom und Pan sind möglich (Mausrad/Pinch, Ziehen der Fläche). Gezoomt wird der **sichtbare Wertebereich der Achsen** (Datenzoom), nicht das gerenderte Bild als Ganzes: Achsen, Teilstriche und Rasterlinien zeigen fortlaufend den aktuell sichtbaren Ausschnitt neu berechnet, Punktgrößen und Schriftgrößen bleiben bei jedem Zoomstand bildschirmkonstant | SOLL |
+| FR-26 | Die Achsen skalieren automatisch auf den vorhandenen Wertebereich, mindestens jedoch bis 21 im Schätzmodus Fibonacci beziehungsweise bis zum eingestellten Maximum im freien Schätzmodus (FR-09) | SOLL |
 
 #### Quadranten-Semantik
 
@@ -258,10 +267,11 @@ SSO --x|"inkompatibel"| LegacyAuth
 | FR-40 | Klick auf ein Feature selektiert es und öffnet einen **Tooltip** mit: Label, ID, Impact, Effort, Liste aller ein- und ausgehenden Beziehungen, Aktionen (Bearbeiten, Löschen, Als Start/Ziel verwenden) |
 | FR-41 | Bei Selektion werden alle `requires`-Vorbedingungen **transitiv** aufgelöst und hervorgehoben |
 | FR-42 | `relates`- und `excludes`-Beziehungen werden nur für die **direkte** Nachbarschaft hervorgehoben |
-| FR-43 | Nicht beteiligte Features und Kanten werden abgedunkelt (Dimming), nicht ausgeblendet |
+| FR-43 | Nicht beteiligte Features und Kanten werden je nach eingestelltem Hervorhebungsmodus (FR-47) entweder abgedunkelt (Dimming, Standard) oder vollständig ausgeblendet |
 | FR-44 | Ein Umschalter erlaubt den Wechsel zwischen *„nur direkte Beziehungen"* und *„transitiv"* |
 | FR-45 | Kantenlabels werden nur bei Selektion oder Hover eingeblendet, um Überfrachtung zu vermeiden |
 | FR-46 | Die Selektion wird durch Klick auf freie Fläche oder ESC aufgehoben |
+| FR-47 | Ein weiterer, unabhängiger Umschalter erlaubt den Wechsel zwischen **Abdunkeln** und **Ausblenden** nicht beteiligter Elemente (FR-43); der Wechsel wirkt sofort, ohne die Selektion aufzuheben |
 
 ### 5.6 Visuelle Kodierung
 
@@ -273,6 +283,7 @@ SSO --x|"inkompatibel"| LegacyAuth
 | Selektiertes Feature | Verstärkte Kontur, hervorgehobene Füllung |
 | Verbindungs-Startpunkt | Gepulste oder gestrichelte Kontur während des laufenden Vorgangs |
 | Zyklus-Warnung (INT-05) | Beteiligte `requires`-Kanten in Warnfarbe plus Warnhinweis in der UI |
+| Ausgeblendetes Element (FR-47, Modus Ausblenden) | Nicht gerendert: kein Platzhalter, keine Trefferfläche, nicht per Tab erreichbar |
 
 **Hinweis zur Zugänglichkeit:** Die Unterscheidung der Beziehungstypen erfolgt bewusst über **Linienform und Endmarkierung**, nicht allein über Farbe. Damit bleibt die Darstellung auch bei Farbfehlsichtigkeit eindeutig.
 
@@ -312,6 +323,7 @@ SSO --x|"inkompatibel"| LegacyAuth
 | FR-73 | Es wird genau **eine** aktive Map verwaltet |
 | FR-74 | Ist der LocalStorage-Inhalt beschädigt oder nicht parsebar, startet die App mit leerer Map und zeigt einen Hinweis, statt abzustürzen |
 | FR-75 | Eine Funktion „Map zurücksetzen" leert den Bestand nach Rückfrage |
+| FR-76 | Schätzmodus und der Wertebereich des freien Schätzmodus (FR-08, FR-09) werden als **App-Einstellung** im LocalStorage persistiert, getrennt vom Kartenbestand und **nicht** Teil des DSL-Exports |
 
 **Akzeptiertes Risiko:** Ein Löschen der Browserdaten führt zum Verlust der Map. Der DSL-Export ist das vom Nutzer bewusst einzusetzende Sicherungsmittel. Eine Warnfunktion ist bewusst **nicht** Teil des MVP.
 
@@ -341,6 +353,9 @@ SSO --x|"inkompatibel"| LegacyAuth
 ```
 
 Die Feature-Liste ist ein **Overlay-Panel**, das über die Map gleitet und diese nicht dauerhaft verkleinert.
+
+Das Menü **Ansicht ▾** bietet zusätzlich den Umschalter *Hervorhebung: Abdunkeln/Ausblenden*
+(FR-47) sowie den Eintrag *Einstellungen* für Schätzmodus und Wertebereich (FR-08, FR-09).
 
 ### 6.2 Layout Mobil
 
@@ -411,7 +426,9 @@ src/
 │   │   └── png.ts              # SVG → Canvas → PNG
 │   ├── store/
 │   │   ├── mapStore.ts         # zentraler reaktiver Store
-│   │   ├── selection.ts
+│   │   ├── selection.ts        # Selektion, Hervorhebungsmodus, Dim/Ausblenden
+│   │   ├── viewport.ts         # sichtbarer Wertebereich (Datenzoom)
+│   │   ├── settings.ts         # Schätzmodus, Wertebereich (App-Einstellung, FR-76)
 │   │   └── persistence.ts      # LocalStorage, debounced
 │   └── components/
 │       ├── Map/
@@ -419,6 +436,7 @@ src/
 │       ├── FeatureModal/
 │       ├── RelationDialog/
 │       ├── ContextMenu/
+│       ├── SettingsDialog/
 │       └── Tooltip/
 └── routes/
     └── +page.svelte
@@ -466,6 +484,28 @@ FUNKTION jitterOffset(featureId, gruppenIndex, gruppenGroesse):
 ```
 
 `gruppenIndex` wird durch stabile Sortierung der Gruppe nach `id` bestimmt.
+
+#### Datenzoom (FR-25)
+
+```
+Zustand: sichtbarer Ausschnitt als (centerEffort, centerImpact, visibleRange)
+  visibleRange ∈ [domainMax / 4, domainMax]   // 1x = ganze Karte, 4x = ein Viertel des Wertebereichs
+
+FUNKTION zoomBeiZeiger(deltaFaktor, zeigerEffort, zeigerImpact):
+  neuerBereich ← clamp(visibleRange · deltaFaktor, domainMax / 4, domainMax)
+  skalenFaktor ← neuerBereich / visibleRange
+  centerEffort ← zeigerEffort + (centerEffort − zeigerEffort) · skalenFaktor
+  centerImpact ← zeigerImpact + (centerImpact − zeigerImpact) · skalenFaktor
+  visibleRange ← neuerBereich
+  // centerEffort/centerImpact anschließend je Achse so klemmen, dass
+  // [center ± visibleRange/2] innerhalb [0, domainMax] bleibt
+```
+
+Achsen, Raster und Teilstriche werden aus `(centerEffort, centerImpact, visibleRange)` neu
+berechnet, nicht aus einer Bildtransformation. Solange `visibleRange = domainMax`, gelten die
+Teilstrichregeln aus 7.2/F-08 (Fibonacci-Reihe bzw. FR-09-Wertebereich); sobald `visibleRange <
+domainMax`, erzeugen die Teilstriche runde, gleichmäßig verteilte Werte im sichtbaren Fenster.
+Punkt- und Schriftgrößen bleiben bei jedem `visibleRange` bildschirmkonstant.
 
 #### PNG-Export (FR-64/65)
 
@@ -549,6 +589,9 @@ FUNKTION jitterOffset(featureId, gruppenIndex, gruppenGroesse):
 | AK-14 | Import mit Referenz auf ein unbekanntes Feature liefert eine zeilengenaue Fehlermeldung; der Bestand bleibt unverändert |
 | AK-15 | Import eines Features mit `impact=7` zeigt im Formular `7` als vorselektierte, markierte Zusatzoption; nach Abbruch bleibt der Wert `7` |
 | AK-16 | Auf einem Gerät mit 375 px Breite sind alle Kernfunktionen erreichbar und bedienbar |
+| AK-17 | Umschalten von Abdunkeln auf Ausblenden lässt nicht beteiligte Elemente vollständig verschwinden, ohne die Selektion aufzuheben; Zurückschalten stellt sie abgedunkelt wieder her |
+| AK-18 | Reinzoomen mit dem Mausrad zeigt einen kleineren Wertebereich mit neu berechneten Teilstrichen; der Wertepunkt unter dem Zeiger bleibt unter dem Zeiger, Punktgröße und Schrift bleiben bildschirmgleich groß |
+| AK-19 | Import eines Dokuments mit `impact=45` bei aktivem Fibonacci-Modus schaltet die Anwendung automatisch auf den freien Schätzmodus um; das Formular zeigt `45` danach als Zahlenfeldwert, nicht als Fibonacci-Auswahl |
 
 ---
 
