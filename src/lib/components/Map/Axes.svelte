@@ -15,9 +15,15 @@
 	Solange effortMin = 0 bzw. impactMin = 0 (Vollansicht), liefert ticksOf weiterhin die
 	Fibonacci-Reihe aus F-08; sonst runde, gleichmäßig verteilte Teilstriche im sichtbaren
 	Fenster (F-25-AK).
+
+	F-26 · Schätzmodus (features/F-26-schaetzmodus.md, Abschnitt „Umfang"): liest estimationMode/
+	estimationRange direkt aus src/lib/store/settings.ts (derselbe Zugriffsweg wie $viewport in
+	MapCanvas.svelte), damit ticksOf bei voller Ansicht im Modus 'free' die runden, gleichmäßig
+	verteilten Teilstriche statt der Fibonacci-Reihe liefert (F-26-AK).
 -->
 <script lang="ts">
 	import { PLOT, ticksOf, xOf, yOf } from '../../layout/scales';
+	import { estimationMode, estimationRange } from '../../store/settings';
 
 	let {
 		effortMin,
@@ -26,8 +32,8 @@
 		impactMax
 	}: { effortMin: number; effortMax: number; impactMin: number; impactMax: number } = $props();
 
-	let xTicks = $derived(ticksOf(effortMin, effortMax));
-	let yTicks = $derived(ticksOf(impactMin, impactMax));
+	let xTicks = $derived(ticksOf(effortMin, effortMax, $estimationMode, $estimationRange));
+	let yTicks = $derived(ticksOf(impactMin, impactMax, $estimationMode, $estimationRange));
 
 	const AXIS_MID_X = (PLOT.left + PLOT.right) / 2;
 	const AXIS_MID_Y = (PLOT.top + PLOT.bottom) / 2;

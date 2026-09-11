@@ -96,6 +96,7 @@
 	} from '$lib/store/selection';
 	import { domainMaxOf } from '$lib/layout/scales';
 	import { resetViewport, viewport } from '$lib/store/viewport';
+	import { estimationMode, estimationRange, initSettings } from '$lib/store/settings';
 	import MapCanvas from '$lib/components/Map/MapCanvas.svelte';
 	import FeatureModal from '$lib/components/FeatureModal/FeatureModal.svelte';
 	import FeatureList from '$lib/components/FeatureList/FeatureList.svelte';
@@ -107,6 +108,7 @@
 	import RelationDialog from '$lib/components/RelationDialog/RelationDialog.svelte';
 	import ImportDialog from '$lib/components/ImportDialog/ImportDialog.svelte';
 	import ExportDialog from '$lib/components/ExportDialog/ExportDialog.svelte';
+	import SettingsDialog from '$lib/components/SettingsDialog/SettingsDialog.svelte';
 	import StatusBar from '$lib/components/StatusBar/StatusBar.svelte';
 	import NoticeBar from '$lib/components/StatusBar/NoticeBar.svelte';
 	import { downloadSvg } from '$lib/export/svg';
@@ -117,12 +119,17 @@
 	// gespeicherte Bestand vor dem ersten Rendern der Karte wiederhergestellt ist.
 	initPersistence();
 
+	// F-26 · Schätzmodus (features/F-26-schaetzmodus.md, Abschnitt „Umfang", FR-76): ebenfalls
+	// synchron und vor resetViewport() unten — domainMaxOf() hängt im Modus 'free' vom
+	// eingestellten Wertebereich ab, der deshalb vor der ersten Skalenberechnung feststehen muss.
+	initSettings();
+
 	// F-25 · Datenzoom (features/F-25-datenzoom.md, Abschnitt „Akzeptanzkriterien": „Nach einem
 	// Neuladen ist wieder die Vollansicht aktiv"): einmalig beim Aufbau der Seite, mit dem
 	// tatsächlichen domainMax des wiederhergestellten Bestands — nicht reaktiv bei jeder
 	// domainMax-Änderung, sonst risse ein wachsendes domainMax (neues Feature über 21) den
 	// Ausschnitt mitten in der Sitzung wieder auf.
-	resetViewport(domainMaxOf($map));
+	resetViewport(domainMaxOf($map, $estimationMode, $estimationRange));
 
 	onMount(() => {
 		initTheme();
@@ -132,7 +139,7 @@
 		theme.set(value);
 	}
 
-	let domainMax = $derived(domainMaxOf($map));
+	let domainMax = $derived(domainMaxOf($map, $estimationMode, $estimationRange));
 
 	/** Menü „Ansicht" im Kopfband (F-25, Abschnitt „Verhalten", Zeile „Zurücksetzen"). */
 	let viewMenuOpen = $state(false);
@@ -167,6 +174,23 @@
 	function openResetConfirm(): void {
 		viewMenuOpen = false;
 		resetConfirmOpen = true;
+	}
+
+	// F-26 · Schätzmodus (features/F-26-schaetzmodus.md, Abschnitt „Umfang"; PRD 6.1;
+	// features/STATUS.md, Abschnitt „Entscheidungen des Orchestrators", Eintrag „Barrierefreier
+	// Kontrakt des Einstellungsdialogs, F-26"): Eintrag „Einstellungen" im bereits bestehenden
+	// Menü „Ansicht", dasselbe Muster wie „Karte zurücksetzen" oben — der Eintrag verschwindet mit
+	// dem Menü, ein Rückkehr-Fokus auf ihn ist deshalb ebenso wenig möglich wie bei
+	// editFeatureFromDirectory() (Kommentar dort).
+	let settingsOpen = $state(false);
+
+	function openSettingsDialog(): void {
+		viewMenuOpen = false;
+		settingsOpen = true;
+	}
+
+	function closeSettingsDialog(): void {
+		settingsOpen = false;
 	}
 
 	function closeResetConfirm(): void {
@@ -484,6 +508,9 @@
 					<div class="view-menu-panel cartouche">
 						<button type="button" onclick={showWholeMap}> Ganze Karte zeigen </button>
 						<button type="button" onclick={openResetConfirm}>Karte zurücksetzen</button>
+						<!-- F-26, Abschnitt „Umfang": „Erreichbar über das Menü Ansicht ▾ (Eintrag
+							Einstellungen, PRD 6.1)". -->
+						<button type="button" onclick={openSettingsDialog}>Einstellungen</button>
 						<!-- F-22, Abschnitt „Umfang", Zeile „Zeichenerklärung": unter 1080 px
 							ausgeblendet, hierüber erreichbar. -->
 						<button type="button" aria-pressed={legendForced} onclick={toggleLegendForced}>
@@ -720,6 +747,11 @@
 	{#if exportDialogOpen}
 		<!-- F-19, Abschnitt "Umfang": Export-Dialog, geöffnet über "Exportieren → Als Text". -->
 		<ExportDialog open={true} map={$map} onClose={closeExportDialog} />
+	{/if}
+
+	{#if settingsOpen}
+		<!-- F-26, Abschnitt "Umfang": Einstellungsdialog, geöffnet über "Ansicht → Einstellungen". -->
+		<SettingsDialog open={settingsOpen} onClose={closeSettingsDialog} />
 	{/if}
 
 	{#if resetConfirmOpen}

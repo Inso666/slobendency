@@ -37,7 +37,7 @@ export function domainMaxOf(
 	mode: EstimationMode = DEFAULT_ESTIMATION_MODE,
 	range: EstimationRange = DEFAULT_ESTIMATION_RANGE
 ): number {
-	let largest = 21;
+	let largest = mode === 'free' ? range.max : 21;
 	for (const feature of map.features) {
 		largest = Math.max(largest, feature.impact, feature.effort);
 	}
@@ -111,9 +111,11 @@ export function ticksOf(
 ): number[] {
 	// Volles Fenster (windowMin = 0, windowMax = domainMax, siehe resetViewport() aus
 	// src/lib/store/viewport.ts: bei visibleRange = domainMax ist centerEffort/centerImpact
-	// zwangsläufig domainMax / 2, das Fenster also immer [0, domainMax]): Fibonacci-Pfad aus F-08
-	// bleibt erhalten (F-25, Abschnitt „Umfang").
-	if (windowMin === 0) {
+	// zwangsläufig domainMax / 2, das Fenster also immer [0, domainMax]) im Schätzmodus Fibonacci:
+	// Fibonacci-Pfad aus F-08 bleibt erhalten (F-25, Abschnitt „Umfang"). Im Modus 'free' liefert
+	// dasselbe volle Fenster stattdessen dieselben runden, gleichmäßig verteilten Teilstriche wie
+	// der gezoomte Pfad unten (F-26, Abschnitt „Umfang").
+	if (windowMin === 0 && mode === 'fibonacci') {
 		const domainMax = windowMax;
 		const ticks = FIBONACCI.filter((value) => value <= domainMax) as number[];
 		if (domainMax > 22) {
