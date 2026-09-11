@@ -307,7 +307,7 @@ test.describe('F-26 · Schätzmodus', () => {
 		const importDialog = page.getByRole('dialog', { name: 'Karte importieren' });
 		await importDialog
 			.getByRole('textbox')
-			.fill('featuremap v1\n\nUnveraendert :: impact=13, effort=8\n');
+			.fill('featuremap v1\n\nunveraendert :: impact=13, effort=8\n');
 		await importDialog.getByRole('button', { name: 'Übernehmen' }).click();
 		await expect(page.getByRole('dialog')).toHaveCount(0);
 
