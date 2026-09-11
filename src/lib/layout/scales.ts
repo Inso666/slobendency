@@ -10,6 +10,8 @@
 
 import { FIBONACCI } from '../model/types';
 import type { FeatureMap, Quadrant } from '../model/types';
+import { DEFAULT_ESTIMATION_MODE, DEFAULT_ESTIMATION_RANGE } from '../store/settings';
+import type { EstimationMode, EstimationRange } from '../store/settings';
 
 /** Größe des SVG-Koordinatensystems (F-08, Abschnitt „Umfang"). */
 export const VIEWBOX = { width: 1000, height: 700 } as const;
@@ -21,8 +23,20 @@ export const PLOT = { left: 80, right: 960, top: 40, bottom: 620 } as const;
  * Obergrenze des dargestellten Wertebereichs: mindestens 22 (FR-26, ein Wert über der
  * Schätzreihe bis 21), sonst eins über dem größten in der Karte vorkommenden impact- oder
  * effort-Wert.
+ *
+ * F-26 · features/F-26-schaetzmodus.md, Abschnitt „Umfang": „domainMaxOf verwendet im Modus
+ * free das eingestellte estimationRange.max statt der festen 21 als Untergrenze (FR-26)" — die
+ * zusätzlichen Parameter `mode`/`range` sind additiv (Default DEFAULT_ESTIMATION_MODE/
+ * DEFAULT_ESTIMATION_RANGE aus src/lib/store/settings.ts), damit jeder bestehende Aufruf mit
+ * nur `map` unverändert das bisherige F-08/F-25-Verhalten (Untergrenze 21) liefert. Ihre
+ * Auswertung im Modus 'free' ist Aufgabe des Feature-Agenten (Test-Agenten-Regel „keine
+ * Logik" — Rumpf bleibt unverändert bei der F-08/F-25-Fassung).
  */
-export function domainMaxOf(map: FeatureMap): number {
+export function domainMaxOf(
+	map: FeatureMap,
+	mode: EstimationMode = DEFAULT_ESTIMATION_MODE,
+	range: EstimationRange = DEFAULT_ESTIMATION_RANGE
+): number {
 	let largest = 21;
 	for (const feature of map.features) {
 		largest = Math.max(largest, feature.impact, feature.effort);
@@ -78,8 +92,23 @@ export function impactAtY(y: number, windowMin: number, windowMax: number): numb
  * „wird nur aufgerufen, wenn visibleRange = domainMax … in jedem anderen Fall … liefert ticksOf
  * runde, gleichmäßig verteilte Werte im übergebenen Fenster"); den zweiten Teil der Bedingung
  * (Schätzmodus Fibonacci) entscheidet erst F-26 (F-25, Abschnitt „Nicht Teil dieses Features").
+ *
+ * F-26 · features/F-26-schaetzmodus.md, Abschnitt „Umfang": „ticksOf bei visibleRange =
+ * domainMax erzeugt im Modus free dieselben runden, gleichmäßig verteilten Teilstriche wie
+ * beim Hineinzoomen aus F-25, statt der Fibonacci-Reihe" — die zusätzlichen Parameter
+ * `mode`/`range` sind additiv (Default DEFAULT_ESTIMATION_MODE/DEFAULT_ESTIMATION_RANGE aus
+ * src/lib/store/settings.ts), damit jeder bestehende Aufruf mit nur (windowMin, windowMax)
+ * unverändert das bisherige F-08/F-25-Verhalten liefert. Ob beim vollen Fenster
+ * (windowMin = 0) trotzdem der Fibonacci-Pfad läuft oder — im Modus 'free' — der Pfad für
+ * runde, gleichmäßig verteilte Werte, ist Aufgabe des Feature-Agenten (Test-Agenten-Regel
+ * „keine Logik" — Rumpf bleibt unverändert bei der F-08/F-25-Fassung).
  */
-export function ticksOf(windowMin: number, windowMax: number): number[] {
+export function ticksOf(
+	windowMin: number,
+	windowMax: number,
+	mode: EstimationMode = DEFAULT_ESTIMATION_MODE,
+	range: EstimationRange = DEFAULT_ESTIMATION_RANGE
+): number[] {
 	// Volles Fenster (windowMin = 0, windowMax = domainMax, siehe resetViewport() aus
 	// src/lib/store/viewport.ts: bei visibleRange = domainMax ist centerEffort/centerImpact
 	// zwangsläufig domainMax / 2, das Fenster also immer [0, domainMax]): Fibonacci-Pfad aus F-08

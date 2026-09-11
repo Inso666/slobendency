@@ -18,6 +18,7 @@ import { describe, expect, it } from 'vitest';
 import { addFeature, emptyMap } from '../model/validation';
 import type { Feature, FeatureMap } from '../model/types';
 import { PLOT, VIEWBOX, domainMaxOf, regionRects, ticksOf, xOf, yOf } from './scales';
+import type { EstimationRange } from '../store/settings';
 
 function feature(overrides: Partial<Feature> = {}): Feature {
 	return { id: 'f', impact: 0, effort: 0, ...overrides };
@@ -271,5 +272,73 @@ describe('regionRects (FR-22, features/README.md „Revier-Grenze")', () => {
 
 		expect(byQuadrant.quickWins.x + byQuadrant.quickWins.width).toBe(expectedBoundaryX);
 		expect(byQuadrant.quickWins.y + byQuadrant.quickWins.height).toBe(expectedBoundaryY);
+	});
+});
+
+// F-26 · features/F-26-schaetzmodus.md, Abschnitt „Umfang": „domainMaxOf verwendet im Modus
+// free das eingestellte estimationRange.max statt der festen 21 als Untergrenze (FR-26)."
+// PRD FR-26 (geändert, PRD 1.1): „mindestens 21 im Schätzmodus Fibonacci beziehungsweise bis
+// zum eingestellten Maximum im freien Schätzmodus."
+describe('domainMaxOf im Modus free (F-26, FR-26)', () => {
+	const RANGE: EstimationRange = { min: 0, max: 50 };
+
+	it('liefert estimationRange.max + 1 für die leere Karte im Modus free (statt der Fibonacci-Untergrenze 21 + 1)', () => {
+		expect(domainMaxOf(emptyMap(), 'free', RANGE)).toBe(51);
+	});
+
+	it('liefert estimationRange.max + 1, solange kein Wert über dem eingestellten Maximum liegt', () => {
+		const map = mapWith(feature({ id: 'a', impact: 13, effort: 30 }));
+		expect(domainMaxOf(map, 'free', RANGE)).toBe(51);
+	});
+
+	it('nimmt weiterhin den größten Kartenwert, sobald er über estimationRange.max liegt', () => {
+		const map = mapWith(feature({ id: 'a', impact: 1, effort: 80 }));
+		expect(domainMaxOf(map, 'free', RANGE)).toBe(81);
+	});
+
+	it('verwendet einen anderen eingestellten Bereich unmittelbar (z. B. { min: 0, max: 200 })', () => {
+		expect(domainMaxOf(emptyMap(), 'free', { min: 0, max: 200 })).toBe(201);
+	});
+
+	it('verhält sich bei explizitem Modus fibonacci weiterhin wie F-08/F-25 (Untergrenze 21), unabhängig von estimationRange', () => {
+		expect(domainMaxOf(emptyMap(), 'fibonacci', RANGE)).toBe(22);
+	});
+
+	it('verhält sich ohne mode/range-Argumente weiterhin wie F-08/F-25 (Rückwärtskompatibilität, Default-Parameter)', () => {
+		expect(domainMaxOf(emptyMap())).toBe(22);
+	});
+});
+
+// F-26 · features/F-26-schaetzmodus.md, Abschnitt „Umfang": „ticksOf bei visibleRange =
+// domainMax erzeugt im Modus free dieselben runden, gleichmäßig verteilten Teilstriche wie
+// beim Hineinzoomen aus F-25, statt der Fibonacci-Reihe."
+describe('ticksOf im Modus free bei vollem Fenster (F-26, F-25 „Nicht Teil dieses Features")', () => {
+	const RANGE: EstimationRange = { min: 0, max: 50 };
+
+	// Exakter Erwartungswert nach demselben „nice numbers"-Verfahren, das der bereits
+	// implementierte gezoomte Pfad unten in dieser Datei verwendet (targetCount 5,
+	// Zehnerpotenz-Schrittweite 1/2/5 × 10^n) — F-26 verlangt wörtlich „dieselben … Teilstriche
+	// wie beim Hineinzoomen aus F-25", nicht nur irgendeine andere Reihe. Für [0, 51]:
+	// span = 51, rawStep = 10.2, magnitude = 10, normalized = 1.02 < √2 ⇒ step = 10 ⇒
+	// [0, 10, 20, 30, 40, 50].
+	it('liefert beim vollen Fenster (windowMin = 0) im Modus free dieselben runden, gleichmäßig verteilten Werte wie der gezoomte Pfad, NICHT die Fibonacci-Reihe', () => {
+		const ticks = ticksOf(0, 51, 'free', RANGE);
+		expect(ticks).toEqual([0, 10, 20, 30, 40, 50]);
+	});
+
+	// Zweiter Fensterwert (anderer Bereich), damit die Erwartung nicht nur für einen einzelnen
+	// Zufallswert zutrifft: [0, 101] ⇒ span = 101, rawStep = 20.2, magnitude = 10,
+	// normalized = 2.02, √2 ≤ 2.02 < √10 ⇒ step = 20 ⇒ [0, 20, 40, 60, 80, 100].
+	it('liefert für ein anderes eingestelltes Maximum ebenfalls die runden, gleichmäßig verteilten Werte des gezoomten Pfads', () => {
+		const ticks = ticksOf(0, 101, 'free', { min: 0, max: 100 });
+		expect(ticks).toEqual([0, 20, 40, 60, 80, 100]);
+	});
+
+	it('liefert beim vollen Fenster weiterhin die Fibonacci-Reihe, wenn der Modus fibonacci ist (unverändert gegenüber F-08/F-25)', () => {
+		expect(ticksOf(0, 22, 'fibonacci', RANGE)).toEqual([1, 2, 3, 5, 8, 13, 21]);
+	});
+
+	it('verhält sich ohne mode/range-Argumente weiterhin wie F-08/F-25 (Rückwärtskompatibilität, Default-Parameter)', () => {
+		expect(ticksOf(0, 22)).toEqual([1, 2, 3, 5, 8, 13, 21]);
 	});
 });
