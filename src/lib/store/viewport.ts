@@ -53,7 +53,11 @@ export const viewport: Writable<Viewport> = writable<Viewport>({
  * Abschnitt „Verhalten", unverändert gegenüber F-12) sowie beim ersten Laden einer Karte.
  */
 export function resetViewport(domainMax: number): void {
-	throw new Error('not implemented');
+	viewport.set({
+		centerEffort: domainMax / 2,
+		centerImpact: domainMax / 2,
+		visibleRange: domainMax
+	});
 }
 
 /**
@@ -65,7 +69,7 @@ export function resetViewport(domainMax: number): void {
  * da kein gesondertes panBy() mehr Teil des Umfangs ist.
  */
 export function centerOn(effort: number, impact: number): void {
-	throw new Error('not implemented');
+	viewport.update((current) => ({ ...current, centerEffort: effort, centerImpact: impact }));
 }
 
 /**
@@ -86,11 +90,27 @@ export function centerOn(effort: number, impact: number): void {
  * maximal hineingezoomt, 1x = volle Ansicht, kein Herauszoomen darüber hinaus (F-25, Abschnitt
  * „Verhalten").
  */
+/** Klemmt `value` auf `[min, max]` (min ≤ max wird von den Aufrufern sichergestellt). */
+function clamp(value: number, min: number, max: number): number {
+	return Math.min(Math.max(value, min), max);
+}
+
 export function zoomAt(
 	deltaFactor: number,
 	pointerEffort: number,
 	pointerImpact: number,
 	domainMax: number
 ): void {
-	throw new Error('not implemented');
+	viewport.update((current) => {
+		const newRange = clamp(current.visibleRange * deltaFactor, domainMax / 4, domainMax);
+		const scaleFactor = newRange / current.visibleRange;
+
+		let centerEffort = pointerEffort + (current.centerEffort - pointerEffort) * scaleFactor;
+		let centerImpact = pointerImpact + (current.centerImpact - pointerImpact) * scaleFactor;
+
+		centerEffort = clamp(centerEffort, newRange / 2, domainMax - newRange / 2);
+		centerImpact = clamp(centerImpact, newRange / 2, domainMax - newRange / 2);
+
+		return { centerEffort, centerImpact, visibleRange: newRange };
+	});
 }

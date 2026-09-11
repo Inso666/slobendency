@@ -61,8 +61,26 @@ function byId(a: Feature, b: Feature): number {
  * Einzelgruppen auf dem Ankerpunkt und versetzt größere Gruppen radial nach der in F-09
  * beschriebenen Formel (FNV-1a-32 über die Kennung, stabile Sortierung nach Kennung für den
  * Gruppenindex).
+ *
+ * `effortMin`/`effortMax` und `impactMin`/`impactMax` (F-25 · features/F-25-datenzoom.md,
+ * Abschnitt „Umfang") projizieren die Ankerpunkte auf das aktuell sichtbare Fenster je Achse
+ * statt auf das volle `[0, domainMax]` — getrennt für effort/impact, weil `centerEffort`/
+ * `centerImpact` unabhängig voneinander verschoben sein können (src/lib/store/viewport.ts). Ohne
+ * sie (Standardwert: volles Fenster auf beiden Achsen) verhält sich die Funktion unverändert wie
+ * vor F-25, jede bestehende Aufrufstelle (u. a. src/lib/layout/jitter.test.ts, das domainMax
+ * weiterhin als einzigen zweiten Parameter reicht) bleibt dadurch gültig. Der deterministische
+ * Versatz (Radius/Winkel) bleibt bildschirmkonstant in Plotflächeneinheiten und damit unabhängig
+ * vom Fenster (F-25, Abschnitt „Verhalten": „Punktradius und Schriftgrößen bleiben … bildschirm-
+ * konstant … nur ihre Position im Fenster ändert sich").
  */
-export function placeFeatures(map: FeatureMap, domainMax: number): Placement[] {
+export function placeFeatures(
+	map: FeatureMap,
+	domainMax: number,
+	effortMin: number = 0,
+	effortMax: number = domainMax,
+	impactMin: number = 0,
+	impactMax: number = domainMax
+): Placement[] {
 	const groups = new Map<string, Feature[]>();
 	for (const feature of map.features) {
 		const key = `${feature.impact}:${feature.effort}`;
@@ -81,8 +99,8 @@ export function placeFeatures(map: FeatureMap, domainMax: number): Placement[] {
 
 	return map.features.map((feature): Placement => {
 		const key = `${feature.impact}:${feature.effort}`;
-		const anchorX = xOf(feature.effort, domainMax);
-		const anchorY = yOf(feature.impact, domainMax);
+		const anchorX = xOf(feature.effort, effortMin, effortMax);
+		const anchorY = yOf(feature.impact, impactMin, impactMax);
 		const sortedGroup = sortedGroups.get(key) as Feature[];
 		const size = sortedGroup.length;
 

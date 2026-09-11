@@ -266,8 +266,8 @@ describe('regionRects (FR-22, features/README.md „Revier-Grenze")', () => {
 	it('verschiebt die Reviergrenze mit, wenn domainMax wächst (unabhängig vom Zoom, abhängig von der Skalierung)', () => {
 		const rects = regionRects(40);
 		const byQuadrant = Object.fromEntries(rects.map((r) => [r.quadrant, r]));
-		const expectedBoundaryX = xOf(20, 40);
-		const expectedBoundaryY = yOf(20, 40);
+		const expectedBoundaryX = xOf(20, 0, 40);
+		const expectedBoundaryY = yOf(20, 0, 40);
 
 		expect(byQuadrant.quickWins.x + byQuadrant.quickWins.width).toBe(expectedBoundaryX);
 		expect(byQuadrant.quickWins.y + byQuadrant.quickWins.height).toBe(expectedBoundaryY);
