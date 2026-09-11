@@ -2,6 +2,17 @@
 // Quellen: features/F-08-kartengeruest.md (Abschnitte „Umfang", „Fachregeln",
 // „Akzeptanzkriterien"), PRD.md (FR-20, FR-21, FR-26), features/README.md (Abschnitt „Zwei
 // Präzisierungen…", Revier-Grenze).
+//
+// Erweitert um F-25 · features/F-25-datenzoom.md (Abschnitte „Umfang", „Tests"): xOf/yOf/
+// ticksOf erhalten ein Fenster [windowMin, windowMax] statt eines festen [0, domainMax]. Die
+// zugehörigen „describe"-Blöcke unten ersetzen die bisherigen, auf die alte
+// Zweiparameter-Signatur zugeschnittenen F-08-Tests (die alte Signatur existiert nach F-25
+// nicht mehr) — domainMaxOf und regionRects sind von F-25 nicht betroffen und bleiben
+// unverändert. regionRects ruft intern weiterhin xOf()/yOf() mit der alten, jetzt entfernten
+// Zweiparameter-Signatur auf (F-25 erweitert nur xOf/yOf/ticksOf selbst, nicht ihre
+// Aufrufstellen) — die regionRects-Tests unten werden dadurch zwangsläufig ebenfalls rot, bis
+// der Feature-Agent regionRects auf die neue Signatur umstellt; das ist kein neuer Testfehler,
+// sondern dieselbe Art Kollateralschaden wie bei den F-12-Tests von src/lib/store/viewport.ts.
 
 import { describe, expect, it } from 'vitest';
 import { addFeature, emptyMap } from '../model/validation';
@@ -61,47 +72,136 @@ describe('domainMaxOf (FR-26)', () => {
 	});
 });
 
-describe('xOf und yOf (FR-20, FR-21)', () => {
-	// F-08-AK: „xOf(0, 22) ist 80, xOf(22, 22) ist 960, yOf(0, 22) ist 620, yOf(22, 22) ist 40."
-	it('bildet die Randwerte des Wertebereichs auf die Plotflächenränder ab', () => {
-		expect(xOf(0, 22)).toBe(80);
-		expect(xOf(22, 22)).toBe(960);
-		expect(yOf(0, 22)).toBe(620);
-		expect(yOf(22, 22)).toBe(40);
+// F-25, Abschnitt „Tests": „xOf/yOf mit Fenstergrenzen ungleich [0, domainMax]".
+describe('xOf und yOf mit Fenstergrenzen (FR-20, FR-21, F-25)', () => {
+	// F-08-AK (weiterhin gültig über den Randfall windowMin = 0): „xOf(0, 22) ist 80,
+	// xOf(22, 22) ist 960, yOf(0, 22) ist 620, yOf(22, 22) ist 40."
+	it('bildet die Randwerte des vollen Fensters [0, domainMax] auf die Plotflächenränder ab', () => {
+		expect(xOf(0, 0, 22)).toBe(80);
+		expect(xOf(22, 0, 22)).toBe(960);
+		expect(yOf(0, 0, 22)).toBe(620);
+		expect(yOf(22, 0, 22)).toBe(40);
 	});
 
-	it('legt die Reviergrenze bei domainMax / 2 auf x = 520 und y = 330 (leere Karte)', () => {
-		expect(xOf(11, 22)).toBe(520);
-		expect(yOf(11, 22)).toBe(330);
+	it('legt die Reviergrenze bei domainMax / 2 auf x = 520 und y = 330 (leere Karte, volles Fenster)', () => {
+		expect(xOf(11, 0, 22)).toBe(520);
+		expect(yOf(11, 0, 22)).toBe(330);
 	});
 
-	it('hoher Nutzen liegt oben: yOf sinkt mit steigendem impact (FR-21)', () => {
-		expect(yOf(5, 22)).toBeGreaterThan(yOf(15, 22));
+	it('skaliert alle Positionen mit, wenn domainMax auf 35 wächst (volles Fenster)', () => {
+		expect(xOf(0, 0, 35)).toBe(80);
+		expect(xOf(35, 0, 35)).toBe(960);
+		expect(yOf(0, 0, 35)).toBe(620);
+		expect(yOf(35, 0, 35)).toBe(40);
 	});
 
-	it('skaliert alle Positionen mit, wenn domainMax auf 35 wächst', () => {
-		expect(xOf(0, 35)).toBe(80);
-		expect(xOf(35, 35)).toBe(960);
-		expect(yOf(0, 35)).toBe(620);
-		expect(yOf(35, 35)).toBe(40);
+	// F-25-AK: „Punktradius und Schriftgröße … bei visibleRange = domainMax und bei
+	// visibleRange = domainMax / 4 identisch groß" setzt voraus, dass xOf/yOf auch für ein
+	// Fenster ungleich [0, domainMax] denselben Plotflächenrahmen ausfüllen (F-25, Abschnitt
+	// „Tests": „xOf/yOf mit Fenstergrenzen ungleich [0, domainMax]").
+	it('bildet die Randwerte eines verschobenen, nicht bei 0 beginnenden Fensters ebenso auf die Plotflächenränder ab', () => {
+		expect(xOf(40, 40, 65)).toBe(80);
+		expect(xOf(65, 40, 65)).toBe(960);
+		expect(yOf(40, 40, 65)).toBe(620);
+		expect(yOf(65, 40, 65)).toBe(40);
+	});
+
+	it('bildet die Fenstermitte eines verschobenen Fensters auf die Mitte der Plotfläche ab', () => {
+		expect(xOf(52.5, 40, 65)).toBe(520);
+		expect(yOf(52.5, 40, 65)).toBe(330);
+	});
+
+	it('hoher Nutzen liegt weiterhin oben, auch innerhalb eines verschobenen Fensters (FR-21)', () => {
+		expect(yOf(45, 40, 65)).toBeGreaterThan(yOf(60, 40, 65));
+	});
+
+	it('bildet ein schmales, weit von 0 entferntes Fenster ebenfalls linear auf die Plotfläche ab', () => {
+		expect(xOf(1000, 1000, 1025)).toBe(80);
+		expect(xOf(1012.5, 1000, 1025)).toBe(520);
+		expect(xOf(1025, 1000, 1025)).toBe(960);
 	});
 });
 
-describe('ticksOf (FR-26)', () => {
-	it('liefert die Schätzreihe 1, 2, 3, 5, 8, 13, 21 für die leere Karte', () => {
-		expect(ticksOf(22)).toEqual([1, 2, 3, 5, 8, 13, 21]);
+// F-25, Abschnitt „Tests": „ticksOf liefert runde Werte innerhalb eines beliebigen Fensters,
+// Fibonacci-Pfad nur bei vollem Fenster." F-25, Abschnitt „Umfang": der Fibonacci-Pfad aus F-08
+// bleibt für das volle Fenster (windowMin = 0, windowMax = domainMax) erhalten; in jedem
+// anderen Fall liefert ticksOf runde, gleichmäßig verteilte Werte im Fenster (kein
+// Schätzmodus-Einfluss in diesem Feature, siehe „Nicht Teil dieses Features" in
+// features/F-25-datenzoom.md).
+describe('ticksOf (FR-26, F-25)', () => {
+	describe('volles Fenster (windowMin = 0, windowMax = domainMax): Fibonacci-Pfad aus F-08 bleibt erhalten', () => {
+		it('liefert die Schätzreihe 1, 2, 3, 5, 8, 13, 21 für die leere Karte', () => {
+			expect(ticksOf(0, 22)).toEqual([1, 2, 3, 5, 8, 13, 21]);
+		});
+
+		it('ergänzt domainMax - 1 als zusätzlichen Teilstrich, sobald ein Wert über 21 vorkommt', () => {
+			expect(ticksOf(0, 35)).toEqual([1, 2, 3, 5, 8, 13, 21, 34]);
+		});
+
+		it('ergänzt auch knapp oberhalb von 21 den zusätzlichen Teilstrich', () => {
+			expect(ticksOf(0, 23)).toEqual([1, 2, 3, 5, 8, 13, 21, 22]);
+		});
+
+		it('lässt Werte der Schätzreihe oberhalb von domainMax weg', () => {
+			expect(ticksOf(0, 4)).toEqual([1, 2, 3]);
+		});
 	});
 
-	it('ergänzt domainMax - 1 als zusätzlichen Teilstrich, sobald ein Wert über 21 vorkommt', () => {
-		expect(ticksOf(35)).toEqual([1, 2, 3, 5, 8, 13, 21, 34]);
-	});
+	describe('gezoomtes (nicht volles) Fenster: runde, gleichmäßig verteilte Werte statt Fibonacci', () => {
+		function stepsOf(values: number[]): number[] {
+			const steps: number[] = [];
+			for (let i = 1; i < values.length; i++) {
+				steps.push(values[i] - values[i - 1]);
+			}
+			return steps;
+		}
 
-	it('ergänzt auch knapp oberhalb von 21 den zusätzlichen Teilstrich', () => {
-		expect(ticksOf(23)).toEqual([1, 2, 3, 5, 8, 13, 21, 22]);
-	});
+		// F-25-AK: „Bei visibleRange = domainMax / 4 zeigen die Achsen neu berechnete, runde
+		// Teilstriche für das sichtbare Fenster, nicht mehr zwingend die Fibonacci-Werte."
+		// domainMax = 22, visibleRange = domainMax / 4 = 5.5, Fenster [8, 13.5] gewählt, damit
+		// es weder bei 0 beginnt noch mit dem vollen Fenster zusammenfällt.
+		it('liefert für ein schmales, verschobenes Fenster mehrere Werte innerhalb der Fenstergrenzen', () => {
+			const ticks = ticksOf(8, 13.5);
+			expect(ticks.length).toBeGreaterThanOrEqual(2);
+			for (const value of ticks) {
+				expect(value).toBeGreaterThanOrEqual(8);
+				expect(value).toBeLessThanOrEqual(13.5);
+			}
+		});
 
-	it('lässt Werte der Schätzreihe oberhalb von domainMax weg', () => {
-		expect(ticksOf(4)).toEqual([1, 2, 3]);
+		it('liefert die Werte im schmalen Fenster aufsteigend sortiert und gleichmäßig verteilt', () => {
+			const ticks = ticksOf(8, 13.5);
+			for (let i = 1; i < ticks.length; i++) {
+				expect(ticks[i]).toBeGreaterThan(ticks[i - 1]);
+			}
+			const steps = stepsOf(ticks);
+			for (const step of steps) {
+				expect(step).toBeCloseTo(steps[0], 6);
+			}
+		});
+
+		it('liefert im schmalen Fenster nicht die auf das Fenster eingeschränkte Fibonacci-Reihe', () => {
+			// Die auf [8, 13.5] eingeschränkte Schätzreihe wäre nur [8, 13] — zwei Werte, exakt
+			// an den Fibonacci-Stellen. Ein „gleichmäßig verteiltes" Ergebnis darf damit nicht
+			// übereinstimmen, sonst wäre der Fibonacci-Pfad fälschlich auch hier aktiv.
+			expect(ticksOf(8, 13.5)).not.toEqual([8, 13]);
+		});
+
+		it('liefert auch für ein Fenster in einem ganz anderen Wertebereich gleichmäßig verteilte, sortierte Werte', () => {
+			const ticks = ticksOf(1000, 1025);
+			expect(ticks.length).toBeGreaterThanOrEqual(2);
+			for (const value of ticks) {
+				expect(value).toBeGreaterThanOrEqual(1000);
+				expect(value).toBeLessThanOrEqual(1025);
+			}
+			for (let i = 1; i < ticks.length; i++) {
+				expect(ticks[i]).toBeGreaterThan(ticks[i - 1]);
+			}
+			const steps = stepsOf(ticks);
+			for (const step of steps) {
+				expect(step).toBeCloseTo(steps[0], 6);
+			}
+		});
 	});
 });
 

@@ -1,119 +1,96 @@
-// Zoom und Pan (F-12 · features/F-12-zoom-pan.md, Abschnitt „Umfang").
+// Datenzoom (F-25 · features/F-25-datenzoom.md, Abschnitt „Umfang").
 //
-// Reiner Darstellungszustand: der Ausschnitt gehört nicht zum Aggregat FeatureMap und wird
-// nicht persistiert (F-12, Abschnitt „DDD-Einordnung") — nach einem Neuladen der Seite startet
-// dieses Modul frisch mit der Vollansicht.
+// Ersetzt die Struktur aus F-12 (features/F-12-zoom-pan.md) vollständig: Der sichtbare
+// Ausschnitt ist nicht mehr eine Bildtransformation (x, y, scale einer `transform`-Gruppe),
+// sondern ein veränderter Eingabebereich der Skalenfunktionen aus F-08/F-25
+// (src/lib/layout/scales.ts, xOf/yOf/ticksOf mit windowMin/windowMax). Reiner
+// Darstellungszustand wie zuvor: der Ausschnitt gehört nicht zum Aggregat FeatureMap und wird
+// nicht persistiert (F-25, Abschnitt „DDD-Einordnung") — nach einem Neuladen der Seite startet
+// dieses Modul frisch.
 //
-// Umgesetzt wird der Ausschnitt über eine `transform`-Gruppe innerhalb des SVG
-// (`translate(x y) scale(scale)`), nicht über eine veränderte `viewBox` (F-12, Abschnitt
-// „Umfang"): die ursprüngliche `viewBox` aus src/lib/layout/scales.ts (VIEWBOX) bleibt für den
-// späteren Bildexport (FR-65) unverändert erhalten. Die hier verwalteten Koordinaten x, y und
-// die Punkte, die zoomAt(), panBy() und centerOn() entgegennehmen, liegen deshalb immer im
-// unskalierten Koordinatenraum von VIEWBOX/PLOT (F-08) — also demselben Raum, in dem
-// xOf()/yOf() ihre Ergebnisse liefern. Die Umrechnung von Bildschirm-Pixeln (Mausrad-Zeiger,
-// Zeigefinger-Position) in diesen Raum ist Aufgabe der Karten-Komponente (SVG-CTM), nicht
-// dieses Moduls.
+// centerEffort/centerImpact/visibleRange liegen im unskalierten Wertebereich der Karte
+// (demselben Raum, in dem xOf()/yOf() ihre Argumente effort/impact entgegennehmen) — nicht im
+// Bildschirm-Pixelraum von VIEWBOX/PLOT. Die Umrechnung von Bildschirm-Pixeln (Mausrad-Zeiger,
+// Zeigefinger-Position) in diesen Wertebereich ist Aufgabe der Karten-Komponente, nicht dieses
+// Moduls (wie schon in F-12).
 //
-// Signatur ist vom Test-Agenten vorgegeben, ergänzt um zoomAt() und panBy(), die die
-// Featurebeschreibung nicht namentlich nennt, aber deren „Tests"-Abschnitt „Zoom um einen
-// Punkt" und deren Verhalten-Tabelle (Mausrad/Pinch, Ziehen) voraussetzt. Rümpfe sind Aufgabe
-// des Feature-Agenten.
+// Signatur ist vom Test-Agenten vorgegeben (F-25, Abschnitt „Umfang"). Rümpfe sind Aufgabe des
+// Feature-Agenten.
 
-import { get, writable, type Writable } from 'svelte/store';
-import { PLOT, VIEWBOX } from '../layout/scales';
+import { writable, type Writable } from 'svelte/store';
 
-/** Ausschnitt der Karte. scale 1 = Vollansicht (F-12, Abschnitt „Umfang"). */
+/**
+ * Sichtbarer Ausschnitt der Karte im Wertebereich (F-25, Abschnitt „Umfang"):
+ * centerEffort/centerImpact sind die Werte im Zentrum des sichtbaren Fensters, visibleRange ist
+ * die Seitenlänge des sichtbaren quadratischen Ausschnitts in Werteeinheiten (1x visibleRange =
+ * domainMax bedeutet Vollansicht, siehe resetViewport()). Das sichtbare Fenster ergibt sich
+ * daraus je Achse als [center − visibleRange/2, center + visibleRange/2].
+ */
 export interface Viewport {
-	x: number;
-	y: number;
-	scale: number;
-}
-
-/** Untere Grenze des Maßstabs (F-12, Abschnitt „Verhalten", Zeile „Grenzen"). */
-export const MIN_SCALE = 0.5;
-
-/** Obere Grenze des Maßstabs (F-12, Abschnitt „Verhalten", Zeile „Grenzen"). */
-export const MAX_SCALE = 4;
-
-/**
- * Reaktiver Store des aktuellen Ausschnitts. Startwert ist die Vollansicht (x=0, y=0, scale=1)
- * — derselbe Wert, den resetViewport() wiederherstellt und den ein Neuladen der Seite erneut
- * liefert, weil der Store nicht persistiert wird.
- */
-export const viewport: Writable<Viewport> = writable<Viewport>({ x: 0, y: 0, scale: 1 });
-
-/**
- * Klemmt den Ausschnitt (x, y) bei gegebenem Maßstab so, dass ein Teil der Plotfläche
- * innerhalb von VIEWBOX sichtbar bleibt (siehe Kommentar über zoomAt()).
- */
-function clampOrigin(x: number, y: number, scale: number): { x: number; y: number } {
-	const minX = -scale * PLOT.right;
-	const maxX = VIEWBOX.width - scale * PLOT.left;
-	const minY = -scale * PLOT.bottom;
-	const maxY = VIEWBOX.height - scale * PLOT.top;
-	return {
-		x: Math.min(Math.max(x, minX), maxX),
-		y: Math.min(Math.max(y, minY), maxY)
-	};
+	centerEffort: number;
+	centerImpact: number;
+	visibleRange: number;
 }
 
 /**
- * Setzt den Ausschnitt auf die Vollansicht zurück (Maßstab 1, Ursprung 0/0) — Knopf
- * „Ansicht → Ganze Karte zeigen" (F-12, Abschnitt „Verhalten").
+ * Reaktiver Store des aktuellen Ausschnitts. Der Startwert ist ein Platzhalter für die leere
+ * Karte (domainMax 22 nach domainMaxOf() aus F-08: centerEffort = centerImpact = 11,
+ * visibleRange = 22) — reine Daten, keine Logik. Sobald eine Karte geladen ist, ist es Aufgabe
+ * der Anwendungsschicht, resetViewport(domainMaxOf(map)) mit dem tatsächlichen domainMax
+ * aufzurufen; kein Unit-Test dieses Moduls verlässt sich auf diesen Platzhalterwert selbst
+ * (siehe viewport.datenzoom.test.ts).
  */
-export function resetViewport(): void {
-	viewport.set({ x: 0, y: 0, scale: 1 });
+export const viewport: Writable<Viewport> = writable<Viewport>({
+	centerEffort: 11,
+	centerImpact: 11,
+	visibleRange: 22
+});
+
+/**
+ * Setzt den Ausschnitt auf die Vollansicht des übergebenen Wertebereichs zurück:
+ * centerEffort = centerImpact = domainMax / 2, visibleRange = domainMax (F-25, Abschnitt
+ * „Umfang", Kommentar über resetViewport()) — Knopf „Ansicht → Ganze Karte zeigen" (F-25,
+ * Abschnitt „Verhalten", unverändert gegenüber F-12) sowie beim ersten Laden einer Karte.
+ */
+export function resetViewport(domainMax: number): void {
+	throw new Error('not implemented');
 }
 
 /**
- * Zentriert den Ausschnitt so, dass der Punkt (x, y) — im unskalierten Koordinatenraum von
- * VIEWBOX/PLOT — in der Mitte der sichtbaren Fläche liegt. Der aktuelle Maßstab bleibt
- * unverändert. Für F-14 (Klick im Verzeichnis zentriert das Feature). Das Ergebnis wird
- * anschließend wie bei zoomAt() und panBy() auf die Plotfläche geklemmt (siehe dort).
+ * Zentriert den Ausschnitt auf den Wertepunkt (effort, impact), ohne visibleRange zu ändern
+ * (F-25, Abschnitt „Umfang", Kommentar „für F-14, hält visibleRange"). Anders als in F-12 ist
+ * das Argument kein Bildschirm-/PLOT-Pixelpunkt, sondern ein Wertepaar aus dem Wertebereich der
+ * Karte. Dient sowohl dem Zentrieren beim Klick im Verzeichnis (F-14, unveränderte Signatur)
+ * als auch dem Verschieben (Pan) durch Ziehen auf freier Fläche (F-25, Abschnitt „Verhalten"),
+ * da kein gesondertes panBy() mehr Teil des Umfangs ist.
  */
-export function centerOn(x: number, y: number): void {
-	const current = get(viewport);
-	const targetX = VIEWBOX.width / 2 - current.scale * x;
-	const targetY = VIEWBOX.height / 2 - current.scale * y;
-	const clamped = clampOrigin(targetX, targetY, current.scale);
-	viewport.set({ x: clamped.x, y: clamped.y, scale: current.scale });
+export function centerOn(effort: number, impact: number): void {
+	throw new Error('not implemented');
 }
 
 /**
- * Ändert den Maßstab um den Faktor `factor` (>1 vergrößert, <1 verkleinert), zentriert auf den
- * Punkt (pointerX, pointerY) — im unskalierten Koordinatenraum von VIEWBOX/PLOT, siehe
- * Modulkommentar. Nach Anwendung von `factor` bleibt der Inhaltspunkt, der vor dem Aufruf genau
- * unter (pointerX, pointerY) lag, an derselben Stelle (F-12-AK „der Punkt unter dem Zeiger
- * bleibt an Ort und Stelle"; auf Mobil ist (pointerX, pointerY) die Mitte der Pinch-Geste).
- * Der resultierende Maßstab wird auf [MIN_SCALE, MAX_SCALE] begrenzt (F-12-AK „Maßstab lässt
- * sich nicht unter 0,5 und nicht über 4 treiben"), danach wird der Ausschnitt so geklemmt, dass
- * weiterhin ein Teil der Plotfläche (PLOT aus src/lib/layout/scales.ts) innerhalb von VIEWBOX
- * sichtbar bleibt (F-12, Abschnitt „Verhalten", Zeile „Grenzen"): x liegt danach im Intervall
- * [-scale·PLOT.right, VIEWBOX.width − scale·PLOT.left], y entsprechend im Intervall
- * [-scale·PLOT.bottom, VIEWBOX.height − scale·PLOT.top].
+ * Ändert visibleRange um den Faktor deltaFactor (>1 vergrößert den sichtbaren Bereich = zoomt
+ * heraus, <1 verkleinert ihn = zoomt hinein), zentriert auf den Wertepunkt (pointerEffort,
+ * pointerImpact) — verbindliche Formel aus F-25, Abschnitt „Verhalten", und PRD 7.3
+ * „Datenzoom (FR-25)":
+ *
+ *   neuerBereich  ← clamp(visibleRange · deltaFactor, domainMax / 4, domainMax)
+ *   skalenFaktor  ← neuerBereich / visibleRange
+ *   centerEffort  ← pointerEffort + (centerEffort − pointerEffort) · skalenFaktor
+ *   centerImpact  ← pointerImpact + (centerImpact − pointerImpact) · skalenFaktor
+ *   visibleRange  ← neuerBereich
+ *
+ * Anschließend werden centerEffort/centerImpact je Achse so geklemmt, dass
+ * [center ± visibleRange/2] innerhalb [0, domainMax] bleibt (F-25, Abschnitt „Verhalten",
+ * Formel-Kommentar). visibleRange selbst ist auf [domainMax / 4, domainMax] begrenzt — 4x
+ * maximal hineingezoomt, 1x = volle Ansicht, kein Herauszoomen darüber hinaus (F-25, Abschnitt
+ * „Verhalten").
  */
-export function zoomAt(pointerX: number, pointerY: number, factor: number): void {
-	const before = get(viewport);
-	const contentX = (pointerX - before.x) / before.scale;
-	const contentY = (pointerY - before.y) / before.scale;
-
-	const newScale = Math.min(Math.max(before.scale * factor, MIN_SCALE), MAX_SCALE);
-	const newX = pointerX - newScale * contentX;
-	const newY = pointerY - newScale * contentY;
-
-	const clamped = clampOrigin(newX, newY, newScale);
-	viewport.set({ x: clamped.x, y: clamped.y, scale: newScale });
-}
-
-/**
- * Verschiebt den Ausschnitt um (dx, dy) — im unskalierten Koordinatenraum von VIEWBOX/PLOT,
- * also unabhängig vom aktuellen Maßstab, weil die Verschiebung in der Transformationskette
- * `translate(x y) scale(scale)` nach der Skalierung greift. Ziehen auf freier Fläche ruft dies
- * mit der Mausbewegung auf, ein Finger-Drag auf Mobil ebenso (F-12, Abschnitt „Verhalten").
- * Anschließend greift dieselbe Klemmung wie bei zoomAt() (siehe dort).
- */
-export function panBy(dx: number, dy: number): void {
-	const before = get(viewport);
-	const clamped = clampOrigin(before.x + dx, before.y + dy, before.scale);
-	viewport.set({ x: clamped.x, y: clamped.y, scale: before.scale });
+export function zoomAt(
+	deltaFactor: number,
+	pointerEffort: number,
+	pointerImpact: number,
+	domainMax: number
+): void {
+	throw new Error('not implemented');
 }
