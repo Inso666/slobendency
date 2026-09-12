@@ -607,9 +607,21 @@
 				die Headerleiste links neben den Schalter für die Hervorhebung [stehen]."): Umschalter
 				aus F-24, unverändert in Bauart und Verhalten (`role="group"`, Knöpfe mit
 				`aria-pressed`, gebunden an `highlightVisibility`), verschoben aus dem Menü „Ansicht" an
-				diese Stelle — unmittelbar links neben dem bestehenden Umschalter „Hervorhebung". Ohne
-				eigenen `.lbl`, wie schon im Menü „Ansicht" zuvor — die Bauart bleibt unverändert. -->
+				diese Stelle — unmittelbar links neben dem bestehenden Umschalter „Hervorhebung".
+
+				QA-Befund (features/qa/BUG-B.md): F-24 verlangt „gleiche Bauart" wie der Umschalter
+				„Hervorhebung" aus F-11 — dessen Bauart in diesem Kopfband schließt den `.lbl` mit ein
+				(ebenso beim Umschalter „Tafel"). Der ursprünglich hierher verschobene Umschalter blieb
+				ohne `.lbl`, wie zuvor im Menü „Ansicht" — dort war ein eigener Textlabel überflüssig,
+				weil der Menüpunkt "Abdunkeln"/"Ausblenden" bereits im Kontext bekannter Menüeinträge
+				stand. Im Kopfband, unmittelbar links von „Hervorhebung", fehlt diese Einordnung: ohne
+				eigenes `.lbl` liest sich die Knopffolge leicht so, als beschriebe das Label
+				„Hervorhebung" auch die beiden vorangehenden Knöpfe „Abdunkeln"/„Ausblenden" mit — das
+				ist nicht der Fall, es sind zwei unabhängige Umschalter. Eigenes `.lbl` „Sichtbarkeit"
+				(kurz für `aria-label`, wie „Tafel" kurz für `aria-label="Farbtafel"` ist) behebt das
+				und stellt „gleiche Bauart" wortgetreu her. -->
 			<span class="scope-item">
+				<span class="lbl">Sichtbarkeit</span>
 				<span class="sw" role="group" aria-label="Sichtbarkeit nicht beteiligter Elemente">
 					<button
 						type="button"
