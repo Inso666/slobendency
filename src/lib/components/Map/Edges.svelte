@@ -37,6 +37,15 @@
 	Touch nach; die bereits bestehende Trefferfläche aus F-11 (`.edge-hitbox`, 12 Einheiten
 	Breite) dient dabei zugleich als Ziel des Rechtsklicks, ist Kind derselben Gruppe wie die
 	sichtbare Linie und liegt so unter derselben `data-relation-*`-Zuordnung.
+
+	Bug A · Zoom-Clipping (https://github.com/Inso666/slobendency/issues/3, Abschnitt „Erwartetes
+	Verhalten"): eine Kante wird ausgeblendet, sobald mindestens einer ihrer beiden Endpunkte
+	außerhalb des sichtbaren Fensters liegt, ebenso der an einem betroffenen Ziel hängende
+	Vorbedingungsring/Durchstreichung — dieselbe Prüfung wie in FeatureNodes.svelte
+	(`isPositionVisible()`, src/lib/layout/scales.ts, am unversetzten Ankerpunkt aus den bereits
+	übergebenen `placements`), einmal aus `placements` abgeleitet und von jeder Stelle unten
+	gelesen, damit die Fachregel „ist ein Feature sichtbar" nicht zweimal hergeleitet wird
+	(features/README.md, Leitplanke 3).
 -->
 <script lang="ts">
 	import { layoutEdges } from '../../layout/edges';
@@ -46,6 +55,7 @@
 	import { cycles } from '../../store/cycles';
 	import { isOnCycle } from '../../graph/cycles';
 	import { highlightVisibility } from '../../store/selection';
+	import { isPositionVisible } from '../../layout/scales';
 
 	/** Dauer eines Long-Press bis zum Öffnen des Beziehungsmenüs (F-17, Absatz zur
 	 * Trefferfläche: "Auf Touchgeräten öffnet Long-Press ... dasselbe Menü"); dieselbe Frist wie
@@ -104,6 +114,25 @@
 	let geometries = $derived(layoutEdges(map.relations, placements));
 	let placementById = $derived(new Map(placements.map((placement) => [placement.id, placement])));
 
+	/** Je Feature: liegt sein Ankerpunkt innerhalb des sichtbaren Fensters (Bug A ·
+	 * Zoom-Clipping)? Dieselbe Ableitung wie in FeatureNodes.svelte, hier aus den übergebenen
+	 * `placements` statt aus eigenen Fensterwerten, damit diese Komponente effortMin/effortMax/
+	 * impactMin/impactMax nicht zusätzlich kennen muss. */
+	let visibility = $derived(
+		new Map(placements.map((placement) => [placement.id, isPositionVisible(placement.anchorX, placement.anchorY)]))
+	);
+
+	/** True, sobald mindestens eines der beiden Enden außerhalb des sichtbaren Fensters liegt
+	 * (Bug-Report, Abschnitt „Erwartetes Verhalten": „falls beide Endpunkte betroffen, die
+	 * zugehörige Kante" — hier bereits ab einem betroffenen Endpunkt). */
+	function isEdgeOutOfWindow(relation: Relation): boolean {
+		return visibility.get(relation.from) === false || visibility.get(relation.to) === false;
+	}
+
+	function isFeatureOutOfWindow(id: string): boolean {
+		return visibility.get(id) === false;
+	}
+
 	/** Kennungen aller Features, die Ziel mindestens einer `requires`-Beziehung sind. */
 	let ringTargets = $derived([
 		...new Set(
@@ -135,7 +164,7 @@
 		{@const key = relationKey(g.relation)}
 		{@const isHighlighted = $highlight !== null && $highlight.relations.has(key)}
 		{@const isDimmed = $highlight !== null && !isHighlighted}
-		{@const isHidden = isDimmed && $highlightVisibility === 'hide'}
+		{@const isHidden = (isDimmed && $highlightVisibility === 'hide') || isEdgeOutOfWindow(g.relation)}
 		{@const showLabel = isHighlighted || hoveredKey === key}
 		{@const isCyclic = isOnCycle($cycles, g.relation)}
 		<g
@@ -222,7 +251,7 @@
 	{#each ringTargets as id (id)}
 		{@const p = placementById.get(id)}
 		{@const isDimmed = $highlight !== null && !$highlight.features.has(id)}
-		{@const isHidden = isDimmed && $highlightVisibility === 'hide'}
+		{@const isHidden = (isDimmed && $highlightVisibility === 'hide') || isFeatureOutOfWindow(id)}
 		{#if p}
 			<circle
 				data-testid="edge-ring-{id}"
@@ -239,7 +268,7 @@
 	{#each strikeTargets as id (id)}
 		{@const p = placementById.get(id)}
 		{@const isDimmed = $highlight !== null && !$highlight.features.has(id)}
-		{@const isHidden = isDimmed && $highlightVisibility === 'hide'}
+		{@const isHidden = (isDimmed && $highlightVisibility === 'hide') || isFeatureOutOfWindow(id)}
 		{#if p}
 			<line
 				data-testid="edge-strike-{id}"

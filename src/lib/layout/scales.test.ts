@@ -17,7 +17,7 @@
 import { describe, expect, it } from 'vitest';
 import { addFeature, emptyMap } from '../model/validation';
 import type { Feature, FeatureMap } from '../model/types';
-import { PLOT, VIEWBOX, domainMaxOf, regionRects, ticksOf, xOf, yOf } from './scales';
+import { PLOT, VIEWBOX, domainMaxOf, isValueVisible, regionRects, ticksOf, xOf, yOf } from './scales';
 import type { EstimationRange } from '../store/settings';
 
 function feature(overrides: Partial<Feature> = {}): Feature {
@@ -340,5 +340,44 @@ describe('ticksOf im Modus free bei vollem Fenster (F-26, F-25 „Nicht Teil die
 
 	it('verhält sich ohne mode/range-Argumente weiterhin wie F-08/F-25 (Rückwärtskompatibilität, Default-Parameter)', () => {
 		expect(ticksOf(0, 22)).toEqual([1, 2, 3, 5, 8, 13, 21]);
+	});
+});
+
+// Bug A · Zoom-Clipping (https://github.com/Inso666/slobendency/issues/3, Abschnitte
+// „Bug-Report", „Ursache", „Erwartetes Verhalten"): Beim Hineinzoomen verschwinden Features
+// außerhalb des sichtbaren Fensters nicht, sondern werden über den Rand der Plotfläche
+// hinausgeschoben. Ursache laut Bug-Report: xOf()/yOf() rechnen ungeklemmt, es fehlt eine
+// Sichtbarkeitsprüfung. isValueVisible() ist die dafür nötige, neu eingeführte Grundlage
+// (scales.ts, siehe dortiger Kommentar) — ob und wie FeatureNodes.svelte/Edges.svelte sie (oder
+// einen gleichwertigen Vergleich) tatsächlich verwenden, ist Aufgabe des Feature-Agenten; hier
+// wird nur die reine Rechenregel geprüft.
+describe('isValueVisible (Bug A · Zoom-Clipping, Grundlage der Sichtbarkeitsprüfung)', () => {
+	it('meldet einen Wert innerhalb des Fensters als sichtbar', () => {
+		expect(isValueVisible(5, 0, 10)).toBe(true);
+	});
+
+	it('meldet einen Wert unterhalb von windowMin als nicht sichtbar', () => {
+		expect(isValueVisible(-1, 0, 10)).toBe(false);
+	});
+
+	it('meldet einen Wert oberhalb von windowMax als nicht sichtbar', () => {
+		expect(isValueVisible(11, 0, 10)).toBe(false);
+	});
+
+	// Bug-Report, Grenzfall: „Feature genau auf der Fensterkante bleibt sichtbar" — die
+	// Intervallgrenzen selbst zählen als sichtbar (inklusiv), nicht erst ein Wert echt innerhalb.
+	it('meldet einen Wert genau auf windowMin als sichtbar (Grenzfall, inklusive Untergrenze)', () => {
+		expect(isValueVisible(0, 0, 10)).toBe(true);
+	});
+
+	it('meldet einen Wert genau auf windowMax als sichtbar (Grenzfall, inklusive Obergrenze)', () => {
+		expect(isValueVisible(10, 0, 10)).toBe(true);
+	});
+
+	it('funktioniert ebenso für ein verschobenes, nicht bei 0 beginnendes Fenster', () => {
+		expect(isValueVisible(8.25, 8.25, 13.75)).toBe(true);
+		expect(isValueVisible(13.75, 8.25, 13.75)).toBe(true);
+		expect(isValueVisible(20, 8.25, 13.75)).toBe(false);
+		expect(isValueVisible(3, 8.25, 13.75)).toBe(false);
 	});
 });

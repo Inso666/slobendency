@@ -57,10 +57,20 @@
 	src/lib/layout/scales.ts), die MapCanvas.svelte für sein eigenes Ziehen auf freier Fläche
 	verwendet, kein zweiter Mechanismus (features/README.md, Leitplanke 3). Bleibt die Bewegung
 	unter der Schwelle, läuft der Long-Press-Timer unverändert weiter (Zittern ist kein Drag).
+
+	Bug A · Zoom-Clipping (https://github.com/Inso666/slobendency/issues/3, Abschnitt „Erwartetes
+	Verhalten"): Ein Feature, dessen Nutzen- oder Aufwandswert außerhalb des sichtbaren Fensters
+	liegt, wird nicht mehr über den Rand der Plotfläche hinausgeschoben dargestellt, sondern
+	vollständig ausgeblendet — Signaturpunkt, Beschriftung und Trefferfläche. `visibility` (unten)
+	prüft je Feature einmal `isPositionVisible()` (src/lib/layout/scales.ts) am unversetzten
+	Ankerpunkt aus placeFeatures() und wird in beiden `{#each}`-Blöcken unten (Trefferflächen,
+	Signaturen) gelesen, damit dieselbe Sichtbarkeitsentscheidung nicht zweimal hergeleitet wird
+	(features/README.md, Leitplanke 3). Der bestehende `hidden`-Mechanismus aus F-24 wird dafür
+	wiederverwendet, kein zweiter Ausblend-Mechanismus.
 -->
 <script lang="ts">
 	import { placeFeatures, type Placement } from '../../layout/jitter';
-	import { PLOT, effortAtX, impactAtY } from '../../layout/scales';
+	import { PLOT, effortAtX, impactAtY, isPositionVisible } from '../../layout/scales';
 	import type { Feature, FeatureId, FeatureMap } from '../../model/types';
 	import { highlight } from '../../store/highlight';
 	import { connectSource, highlightVisibility, selectedId } from '../../store/selection';
@@ -154,6 +164,17 @@
 	let placements = $derived(
 		placeFeatures(map, domainMax, effortMin, effortMax, impactMin, impactMax)
 	);
+
+	/** Je Feature: liegt sein Ankerpunkt innerhalb des sichtbaren Fensters (Bug A ·
+	 * Zoom-Clipping)? Einmal aus den Placements abgeleitet, von beiden `{#each}`-Blöcken unten
+	 * (Trefferflächen, Signaturen) gelesen. */
+	let visibility = $derived(
+		new Map(placements.map((placement) => [placement.id, isPositionVisible(placement.anchorX, placement.anchorY)]))
+	);
+
+	function isOutOfWindow(id: FeatureId): boolean {
+		return visibility.get(id) === false;
+	}
 
 	function featureOf(id: FeatureId): Feature {
 		const feature = map.features.find((candidate) => candidate.id === id);
@@ -330,7 +351,7 @@
 <g class="hitareas">
 	{#each placements as placement (placement.id)}
 		{@const isDimmed = $highlight !== null && !$highlight.features.has(placement.id)}
-		{@const isHidden = isDimmed && $highlightVisibility === 'hide'}
+		{@const isHidden = (isDimmed && $highlightVisibility === 'hide') || isOutOfWindow(placement.id)}
 		<circle
 			class="hitarea"
 			data-testid="feature-hitarea-{placement.id}"
@@ -374,7 +395,7 @@
 		{@const flipLeft = nearRightEdge(placement.x)}
 		{@const isSelected = placement.id === $selectedId}
 		{@const isDimmed = $highlight !== null && !$highlight.features.has(placement.id)}
-		{@const isHidden = isDimmed && $highlightVisibility === 'hide'}
+		{@const isHidden = (isDimmed && $highlightVisibility === 'hide') || isOutOfWindow(placement.id)}
 		{@const isConnectStart = placement.id === $connectSource}
 		<g
 			class="node"

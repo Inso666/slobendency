@@ -85,6 +85,41 @@ export function impactAtY(y: number, windowMin: number, windowMax: number): numb
 }
 
 /**
+ * Prüft, ob ein Aufwands- oder Nutzenwert innerhalb des sichtbaren Fensters
+ * [windowMin, windowMax] liegt (Bug A · Zoom-Clipping,
+ * https://github.com/Inso666/slobendency/issues/3, Abschnitt „Ursache"): xOf()/yOf() rechnen
+ * Werte linear und ungeklemmt in Bildschirmkoordinaten um, unabhängig davon, ob der Wert
+ * innerhalb des aktuell sichtbaren Fensters liegt — bislang fehlt an jeder Aufrufstelle
+ * (FeatureNodes.svelte, Edges.svelte) eine Sichtbarkeitsprüfung, die verhindert, dass ein
+ * Feature außerhalb des Fensters trotzdem über den Rand der Plotfläche hinausgeschoben
+ * dargestellt wird. Die Intervallgrenzen selbst zählen als sichtbar (Bug-Report, Grenzfall
+ * „Feature genau auf der Fensterkante bleibt sichtbar").
+ */
+export function isValueVisible(value: number, windowMin: number, windowMax: number): boolean {
+	return value >= windowMin && value <= windowMax;
+}
+
+/**
+ * Prüft, ob eine bereits berechnete Plotflächen-Position — insbesondere ein unversetzter
+ * Ankerpunkt aus src/lib/layout/jitter.ts (Placement.anchorX/anchorY) — innerhalb der sichtbaren
+ * Plotfläche liegt (Bug A · Zoom-Clipping, https://github.com/Inso666/slobendency/issues/3).
+ *
+ * Baut auf isValueVisible() auf, prüft aber gegen die Plotflächenränder (PLOT) statt gegen das
+ * Fenster [windowMin, windowMax] selbst: xOf()/yOf() bilden das Fenster linear und injektiv auf
+ * [PLOT.left, PLOT.right] beziehungsweise [PLOT.top, PLOT.bottom] ab, ein Wert liegt also genau
+ * dann im Fenster, wenn seine daraus berechnete Position innerhalb dieser Ränder liegt (Beweis:
+ * xOf/yOf sind streng monoton und bilden die Fenstergrenzen exakt auf die Plotflächenränder ab).
+ * FeatureNodes.svelte und Edges.svelte kennen dadurch weder effortMin/effortMax/impactMin/
+ * impactMax noch die ursprünglichen impact-/effort-Werte erneut — beide verwenden stattdessen
+ * denselben, ohnehin bereits vorhandenen Ankerpunkt aus jitter.ts, wodurch die Fachregel „ist ein
+ * Feature sichtbar" nur einmal steht (features/README.md, Leitplanke 3), nicht je Komponente
+ * erneut aus den Rohwerten hergeleitet.
+ */
+export function isPositionVisible(x: number, y: number): boolean {
+	return isValueVisible(x, PLOT.left, PLOT.right) && isValueVisible(y, PLOT.top, PLOT.bottom);
+}
+
+/**
  * Liefert „schöne" Teilstrichwerte innerhalb des sichtbaren Fensters [windowMin, windowMax]
  * (F-25, Abschnitt „Umfang"). Der bisherige Fibonacci-Pfad aus F-08 (FIBONACCI-Werte ≤
  * windowMax, ergänzt um windowMax - 1 oberhalb von 22) bleibt für das volle Fenster

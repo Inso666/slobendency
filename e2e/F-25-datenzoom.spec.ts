@@ -223,9 +223,21 @@ const ZWEI_FEATURES: SeedFeature[] = [
 
 // „a" und „c" liegen nah beieinander, damit beide auch im vollständig hineingezoomten Fenster
 // (visibleRange = domainMax / 4 um „a") noch sichtbar sind; „b" liegt weit entfernt.
+// Bug A · QA (12.09., features/STATUS.md, Entscheidung „Zwei durch Bug A demaskierte
+// Testannahmen"): „c" stand ursprünglich bei effort=2/impact=4. Live gegen einen frischen
+// Build nachgemessen (dieselben Schritte wie im Test unten: Klick auf „a", 60 Radschritte
+// hinein auf dessen Bildschirmpunkt) landet das Fenster bei domainMax=22 nach der
+// Center-Klemmung aus zoomAt() bei centerEffort = centerImpact = 5, visibleRange =
+// domainMax / 4 = 5.5 — also effort ≈ [2.235, 7.741] und impact ≈ [2.252, 7.761]. effort=2 lag
+// damit knapp UNTERHALB der unteren Fensterkante; „c" wurde beim Zoomen tatsächlich
+// ausgeblendet statt (wie die vorige Annahme unterstellte) sichtbar zu bleiben — das machte
+// diesen Test unbeabsichtigt von Bug A abhängig. effort auf 4 angehoben (impact unverändert):
+// beide Werte liegen deutlich innerhalb des gemessenen Fensters, live gegengeprüft (Signatur
+// nach dem Zoom weiterhin sichtbar, kein `hidden`-Attribut gesetzt). domainMax bleibt bei 22
+// (4 < 21), die oben gemessenen Fensterwerte gelten für die korrigierten Seed-Werte unverändert.
 const DREI_FEATURES: SeedFeature[] = [
 	{ id: 'a', label: 'A', impact: 3, effort: 3 },
-	{ id: 'c', label: 'C', impact: 4, effort: 2 },
+	{ id: 'c', label: 'C', impact: 4, effort: 4 },
 	{ id: 'b', label: 'B', impact: 18, effort: 18 }
 ];
 
