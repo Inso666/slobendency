@@ -1,32 +1,34 @@
 // F-24 · Hervorhebung: Abdunkeln oder Ausblenden — E2E-Tests.
 // Quellen: features/F-24-hervorhebung-sichtbarkeit.md (Akzeptanzkriterien, Abschnitte
-// „Darstellung", „Interaktion", „Fachregeln"), PRD.md (FR-43, FR-47, NFR-03, AK-17, Abschnitt
-// 6.1 „Das Menü Ansicht ▾ bietet zusätzlich den Umschalter Hervorhebung:
-// Abdunkeln/Ausblenden"), design/03-seekarte.html (Klasse `.dim`), features/F-11-selektion.md
-// (highlightMode, `.dim`, Bauart des bestehenden Umschalters), e2e/F-11-selektion.spec.ts und
-// e2e/F-12-zoom-pan.spec.ts (Testmuster: seedMap, effectiveOpacity, Menü „Ansicht" öffnen).
+// „Darstellung", „Interaktion", „Fachregeln"), PRD.md (FR-43, FR-47, NFR-03, AK-17),
+// design/03-seekarte.html (Klasse `.dim`, Kopfband-Container `.scope` mit den Umschaltern
+// „Hervorhebung"/„Tafel"), features/F-11-selektion.md (highlightMode, `.dim`, Bauart und Ort
+// des bestehenden Umschalters „Hervorhebung" im Kopfband), e2e/F-11-selektion.spec.ts (Testmuster
+// seedMap, effectiveOpacity), features/STATUS.md, Abschnitt „Bekannte Fehler / Bugfixes",
+// Eintrag „Bug B" (12.09., wörtliche Nutzeranweisung: „Der Schalter zur Auswahl zwischen
+// Abdunkeln und Ausblenden sollte in die Headerleiste links neben den Schalter für die
+// Hervorhebung [stehen].").
+//
+// Bug B ersetzt ausdrücklich die frühere, am 11.09. getroffene Festlegung, den Umschalter im
+// Menü „Ansicht ▾" unterzubringen (festgehalten in features/STATUS.md, Abschnitt
+// „Entscheidungen des Orchestrators", 11.09., und zuvor in diesen Tests umgesetzt). Der Nutzer
+// hat den Ort jetzt direkt und wörtlich neu bestimmt: das Kopfband, unmittelbar links neben dem
+// bestehenden Umschalter „Hervorhebung" — kein Menü mehr. Diese Tests bilden nur noch den neuen
+// Ort ab; die frühere Menü-Platzierung ist kein gültiger Zustand mehr.
 //
 // Vertrag für den Feature-Agenten — keine neuen data-testid nötig, alles über Rolle/Text bzw.
 // bereits vergebene Kennzeichen aus F-08/F-09/F-10/F-11 ansprechbar
 // (feature-node-<id>, feature-hitarea-<id>, feature-halo-<id>, edge-<from>-<to>-<type>):
-//   - Der neue Umschalter sitzt im bereits bestehenden Menü "Ansicht" im Kopfband (Knopf
-//     „Ansicht" öffnet das Panel, wie in e2e/F-12-zoom-pan.spec.ts).
-//   - Darin ein `role="group"` mit `aria-label="Sichtbarkeit nicht beteiligter Elemente"`,
-//     zwei Knöpfe mit sichtbarem Text „Abdunkeln" und „Ausblenden" (`aria-pressed` je nachdem,
-//     ob `highlightVisibility` „dim" oder „hide" ist) — dieselbe Bauart wie der bestehende
-//     Umschalter „Hervorhebung" aus F-11 (`role="group"`, Knöpfe mit `aria-pressed`).
-//
-// Anmerkung an den Orchestrator (kein eigener Entscheid, nur Feststellung — CLAUDE.md,
-// Abschnitt „Regeln für den Test-Agenten"): features/F-24-hervorhebung-sichtbarkeit.md nennt im
-// Abschnitt „Darstellung", Zeile „Umschalter", den neuen Schalter „neben dem Umschalter nur
-// direkte/transitiv aus F-11" — jener sitzt im Kopfband außerhalb jedes Menüs (`.scope`,
-// `role="group" aria-label="Hervorhebung"`, siehe src/routes/+page.svelte). Der unmittelbar
-// folgende Satz verlangt dagegen „Erreichbar über das Menü Ansicht ▾ (PRD 6.1)" — ein anderer
-// Ort. Beide Ortsangaben stehen im selben Dokument und widersprechen sich wörtlich. Diese Tests
-// folgen der in features/STATUS.md, Abschnitt „Entscheidungen des Orchestrators" (11.09.),
-// bereits festgehaltenen Festlegung („Einstellungen und der neue Sichtbarkeits-Umschalter
-// hängen am bestehenden Menü Ansicht ▾ statt einer neuen Symbolleisten-Schaltfläche") und
-// platzieren den Umschalter im Ansicht-Menü, wie es auch PRD 6.1 explizit beschreibt.
+//   - Der Umschalter sitzt direkt im Kopfband (demselben Container wie der Umschalter
+//     „Hervorhebung" aus F-11, `.scope` in src/routes/+page.svelte), nicht mehr im Menü
+//     „Ansicht" und nicht mehr hinter einem Menü-Knopf verborgen — ohne jede Interaktion nach
+//     dem Laden der Seite sichtbar.
+//   - Er steht im Kopfband unmittelbar VOR (links von) dem Umschalter „Hervorhebung", innerhalb
+//     desselben Containers.
+//   - Bauart unverändert: `role="group"` mit `aria-label="Sichtbarkeit nicht beteiligter
+//     Elemente"`, zwei Knöpfe mit sichtbarem Text „Abdunkeln" und „Ausblenden" (`aria-pressed`
+//     je nachdem, ob `highlightVisibility` „dim" oder „hide" ist) — dieselbe Bauart wie der
+//     bestehende Umschalter „Hervorhebung" aus F-11 (`role="group"`, Knöpfe mit `aria-pressed`).
 
 import { expect, test, type Page } from '@playwright/test';
 
@@ -74,29 +76,19 @@ async function effectiveOpacity(page: Page, testId: string): Promise<number> {
 	}, testId);
 }
 
-/** Öffnet das Menü „Ansicht" im Kopfband (wie in e2e/F-12-zoom-pan.spec.ts). */
-async function openViewMenu(page: Page): Promise<void> {
-	await page.getByRole('button', { name: 'Ansicht' }).click();
-}
-
-/** Der neue Umschalter aus F-24 (Vertragsbeschreibung oben). */
+/** Der Umschalter aus F-24/Bug B (Vertragsbeschreibung oben) — direkt im Kopfband. */
 function sichtbarkeitGruppe(page: Page) {
 	return page.getByRole('group', { name: 'Sichtbarkeit nicht beteiligter Elemente' });
 }
 
 /**
- * Schaltet auf „Abdunkeln" oder „Ausblenden" um. Öffnet das Menü „Ansicht" nur, wenn der
- * Umschalter nicht bereits sichtbar ist — robust unabhängig davon, ob der Feature-Agent das
- * Menü nach einer Aktion schließt (wie die übrigen Einträge des Menüs „Ansicht", z. B.
- * „Zeichenerklärung") oder offen lässt.
+ * Schaltet auf „Abdunkeln" oder „Ausblenden" um. Der Umschalter steht seit Bug B direkt im
+ * Kopfband und ist ohne jede Interaktion (kein Menü zu öffnen) erreichbar.
  */
 async function setVisibility(page: Page, value: 'dim' | 'hide'): Promise<void> {
 	const knopf = sichtbarkeitGruppe(page).getByRole('button', {
 		name: value === 'dim' ? 'Abdunkeln' : 'Ausblenden'
 	});
-	if (!(await knopf.isVisible().catch(() => false))) {
-		await openViewMenu(page);
-	}
 	await knopf.click();
 }
 
@@ -134,13 +126,54 @@ test.describe('F-24 · Hervorhebung: Abdunkeln oder Ausblenden', () => {
 		await expect(page.getByTestId('feature-node-z')).toBeVisible();
 		await expect.poll(() => effectiveOpacity(page, 'feature-node-z')).toBeCloseTo(0.24, 1);
 
-		await openViewMenu(page);
+		// Der Umschalter ist ohne jede weitere Interaktion sichtbar — kein Menü zu öffnen (Bug B).
 		await expect(
 			sichtbarkeitGruppe(page).getByRole('button', { name: 'Abdunkeln' })
 		).toHaveAttribute('aria-pressed', 'true');
 		await expect(
 			sichtbarkeitGruppe(page).getByRole('button', { name: 'Ausblenden' })
 		).toHaveAttribute('aria-pressed', 'false');
+	});
+
+	// Bug B, wörtliche Nutzeranweisung: „Der Schalter zur Auswahl zwischen Abdunkeln und
+	// Ausblenden sollte in die Headerleiste links neben den Schalter für die Hervorhebung
+	// [stehen]." Zwei beobachtbare Prüfungen, keine Implementierungsdetails (keine CSS-Klassen):
+	// (1) der Umschalter ist ohne jede Interaktion sichtbar — nicht mehr hinter einem
+	// Menü-Knopf erreichbar; (2) er steht im DOM unmittelbar vor dem Umschalter „Hervorhebung"
+	// und liegt links von ihm auf derselben Zeile.
+	test('steht im Kopfband unmittelbar links neben dem Umschalter „Hervorhebung", nicht mehr hinter dem Menü „Ansicht" erreichbar', async ({
+		page
+	}) => {
+		await seedMap(page, KETTE);
+		await page.goto('/');
+
+		// (1) Sichtbar ohne jede Interaktion — insbesondere ohne das Menü „Ansicht" zu öffnen.
+		await expect(sichtbarkeitGruppe(page)).toBeVisible();
+		await expect(hervorhebungGruppe(page)).toBeVisible();
+
+		// (2a) Reihenfolge im DOM: von allen derzeit sichtbaren `role="group"`-Elementen der
+		// Seite steht „Sichtbarkeit nicht beteiligter Elemente" unmittelbar vor „Hervorhebung" —
+		// kein anderes sichtbares Element dazwischen.
+		const gruppen = await page.getByRole('group').all();
+		const namen = await Promise.all(gruppen.map((gruppe) => gruppe.getAttribute('aria-label')));
+		const indexSichtbarkeit = namen.indexOf('Sichtbarkeit nicht beteiligter Elemente');
+		const indexHervorhebung = namen.indexOf('Hervorhebung');
+		expect(
+			indexSichtbarkeit,
+			`Umschalter „Sichtbarkeit nicht beteiligter Elemente" nicht unter den sichtbaren Gruppen gefunden: ${JSON.stringify(namen)}`
+		).toBeGreaterThanOrEqual(0);
+		expect(
+			indexHervorhebung,
+			'Umschalter „Sichtbarkeit nicht beteiligter Elemente" steht nicht unmittelbar vor „Hervorhebung"'
+		).toBe(indexSichtbarkeit + 1);
+
+		// (2b) Bounding-Box-Vergleich: links von „Hervorhebung", auf derselben Zeile des Kopfbands.
+		const boxSichtbarkeit = await sichtbarkeitGruppe(page).boundingBox();
+		const boxHervorhebung = await hervorhebungGruppe(page).boundingBox();
+		expect(boxSichtbarkeit, 'Umschalter „Sichtbarkeit…" liefert keine Bounding Box').not.toBeNull();
+		expect(boxHervorhebung, 'Umschalter „Hervorhebung" liefert keine Bounding Box').not.toBeNull();
+		expect(boxSichtbarkeit!.x).toBeLessThan(boxHervorhebung!.x);
+		expect(Math.abs(boxSichtbarkeit!.y - boxHervorhebung!.y)).toBeLessThan(10);
 	});
 
 	// Kernablauf, AK-17: „Umschalten von Abdunkeln auf Ausblenden lässt nicht beteiligte
@@ -293,10 +326,8 @@ test.describe('F-24 · Hervorhebung: Abdunkeln oder Ausblenden', () => {
 		// dass hier überhaupt etwas umzuschalten ist.
 		await expect.poll(() => effectiveOpacity(page, 'feature-node-f50')).toBeLessThan(0.9);
 
-		// Menü öffnen (nicht Teil der gemessenen Zeitspanne — gemessen wird nur der eigentliche
-		// Wechsel des Umschalters).
-		await openViewMenu(page);
-
+		// Der Umschalter steht seit Bug B direkt im Kopfband, kein Menü zu öffnen — gemessen wird
+		// nur der eigentliche Wechsel des Umschalters.
 		const duration = await page.evaluate(() => {
 			return new Promise<number>((resolve, reject) => {
 				const knopf = Array.from(document.querySelectorAll('button')).find(
