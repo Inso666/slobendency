@@ -280,6 +280,31 @@ button {
 	letter-spacing: 0.14em;
 }
 
+/* Bug B (features/STATUS.md, Abschnitt „Bekannte Fehler / Bugfixes"): der neue Umschalter
+   „Sichtbarkeit nicht beteiligter Elemente" in `.scope` macht das Kopfband ab hier breiter, als
+   in einer Zeile Platz ist (title+acts+scope überschreiten die verfügbare Breite deutlich, nicht
+   nur um ein paar Pixel). Breakpoint 1024 px ist keine neue Zahl, sondern deckt sich mit dem in
+   F-22 (features/F-22-responsiv.md, Abschnitt „Umfang", UI-18) bereits festgelegten
+   Tablet-Bereich „768 bis 1024 px" — Desktop (> 1024 px, deckt insbesondere die 1440-px-QA-Probe
+   und die in vielen E2E-Tests genutzte Standardbreite 1280 px ab) bleibt einzeilig mit fester
+   Höhe unverändert wie im Entwurf. Absichtlich NICHT am tatsächlichen Inhalt bemessen (etwa über
+   `flex-wrap` auf `.ribbon` ohne Breakpoint): die Zeilenbreite von `.title` hängt am geladenen
+   Schriftschnitt (Fraunces via Google Fonts, zunächst Fallback-Schrift) und ändert sich dadurch
+   nach dem ersten Rendern um ein paar Pixel — läge die Umbruchschwelle nahe einer gängigen
+   Fensterbreite (etwa 1280 px, s. o.), kippte das Kopfband mitten im Testlauf von ein- auf
+   zweizeilig, verschöbe die Kartenfläche darunter und ließe u. a. die Datenzoom-Tests
+   (e2e/F-25-datenzoom.spec.ts) nichtdeterministisch fehlschlagen. Der feste Pixel-Breakpoint
+   umgeht das: die Umbruchentscheidung hängt nur von der (synchron bekannten) Fensterbreite ab,
+   nicht vom asynchron nachladenden Schriftgewicht. */
+@media (max-width: 1024px) {
+	.ribbon {
+		flex-wrap: wrap;
+		height: auto;
+		min-height: 60px;
+		row-gap: 8px;
+	}
+}
+
 /* ── Kopfband auf schmalen Fenstern (design/03-seekarte.html, @media max-width:768px) ── */
 @media (max-width: 768px) {
 	.title span {
