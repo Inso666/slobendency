@@ -364,6 +364,36 @@ bestehende Selektor in Zeile ~296 lautet aber `openEditModal(page, 'unveraendert
 geparst wurde. Gleiche Art von Versehen wie Korrektur 2. Freigegeben: Kennung im Importtext auf
 `unveraendert` (klein) setzen, passend zum bestehenden Selektor. Prüfabsicht unverändert.
 
+## Bekannte Fehler / Bugfixes
+
+Nicht Teil von `features/README.md` (keine eigene Featuredatei), daher hier statt in der
+Feature-Tabelle oben geführt. Derselbe Ablauf wie bei einem Feature (Tests zuerst, dann
+Umsetzung, dann QA, Merge mit `--no-ff`), nur ohne `features/F-XX-*.md` als Quelle — Vorlage ist
+stattdessen der Bug-Report/die Nutzerbeschreibung unten. Branchname `fix/<kurz>` statt
+`feature/F-XX-*`.
+
+| Bug | Zustand | Branch | Anmerkung |
+|---|---|---|---|
+| A — F-25 Datenzoom: Features verlassen die Plotfläche statt auszublenden | in Tests | fix/f25-zoom-clipping | Test-Agent schreibt |
+| B — F-24 Umschalter Abdunkeln/Ausblenden gehört ins Kopfband, links neben „Hervorhebung" (nicht ins Menü „Ansicht") | in Tests | fix/f24-switch-platzierung | Test-Agent schreibt |
+
+**Bug A** (12.09., vom Nutzer gemeldet). `xOf`/`yOf` (`src/lib/layout/scales.ts`) klemmen nicht
+auf `[windowMin, windowMax]`, und weder `FeatureNodes.svelte`/`Edges.svelte` noch
+`MapCanvas.svelte` haben eine Sichtbarkeitsprüfung oder einen `clip-path` gegen die Plotfläche.
+Erwartung: ein Feature, dessen Wert außerhalb des sichtbaren Fensters liegt, wird beim
+Zoomen/Verschieben ausgeblendet, statt sichtbar über den Rand der Plotfläche hinausgeschoben zu
+werden. Bug-Report: https://github.com/Inso666/slobendency/issues/3
+
+**Bug B** (12.09., vom Nutzer gemeldet, ersetzt die F-24-Festlegung vom 11.09.). Der Umschalter
+*Abdunkeln*/*Ausblenden* sitzt bisher im Menü „Ansicht ▾" (Festlegung „PRD 1.1 — drei
+Erweiterungen aus Nutzergespräch", 11.09.). Der Nutzer legt jetzt fest: der Umschalter gehört
+stattdessen direkt ins Kopfband, links neben dem bestehenden Umschalter „Hervorhebung"
+(`role="group"`, `aria-label="Hervorhebung"`, Knöpfe „Nur direkte"/„Transitiv", F-11) — gleiche
+Bauart, gleiche Ebene, kein Menü. Das ersetzt die frühere Festlegung ausdrücklich; die spätere,
+direkte Nutzerangabe ist maßgeblich. Betrifft `src/routes/+page.svelte` (Verschieben des
+Markups aus dem „Ansicht"-Menü ins Kopfband) und `e2e/F-24-hervorhebung-sichtbarkeit.spec.ts`
+(Helfer `setVisibility`/Kommentare gehen bisher vom Menü „Ansicht" aus).
+
 ## Sessionprotokoll
 
 Je Session eine Zeile: Datum, geweckt oder manuell gestartet, was erledigt wurde, womit die
