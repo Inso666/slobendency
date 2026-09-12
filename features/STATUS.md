@@ -374,7 +374,7 @@ stattdessen der Bug-Report/die Nutzerbeschreibung unten. Branchname `fix/<kurz>`
 
 | Bug | Zustand | Branch | Anmerkung |
 |---|---|---|---|
-| A — F-25 Datenzoom: Features verlassen die Plotfläche statt auszublenden | in Arbeit | fix/f25-zoom-clipping | 6 Unit- und 4 E2E-Tests rot committet (a6e706b) |
+| A — F-25 Datenzoom: Features verlassen die Plotfläche statt auszublenden | in QA | fix/f25-zoom-clipping | 575/575 Unit grün; 2 durch den Fix demaskierte Testannahmen gefunden und freigegeben, QA-Agent behebt |
 | B — F-24 Umschalter Abdunkeln/Ausblenden gehört ins Kopfband, links neben „Hervorhebung" (nicht ins Menü „Ansicht") | in Arbeit | fix/f24-switch-platzierung | 9 Tests rot committet (87d0320) |
 
 **Bug A** (12.09., vom Nutzer gemeldet). `xOf`/`yOf` (`src/lib/layout/scales.ts`) klemmen nicht
@@ -393,6 +393,36 @@ Bauart, gleiche Ebene, kein Menü. Das ersetzt die frühere Festlegung ausdrück
 direkte Nutzerangabe ist maßgeblich. Betrifft `src/routes/+page.svelte` (Verschieben des
 Markups aus dem „Ansicht"-Menü ins Kopfband) und `e2e/F-24-hervorhebung-sichtbarkeit.spec.ts`
 (Helfer `setVisibility`/Kommentare gehen bisher vom Menü „Ansicht" aus).
+
+**Zwei durch Bug A demaskierte Testannahmen (12.09.).** Der Feature-Agent für Bug A hat zwei
+vorher grüne E2E-Tests gemeldet, die jetzt rot sind, weil sie sich unbemerkt auf den soeben
+behobenen Fehler (Features wurden nie ausgeblendet) verlassen haben. Beide geprüft und bestätigt,
+kein Quellwiderspruch, sondern jeweils eine durch den Bugfix aufgedeckte falsche Testannahme:
+
+1. `e2e/F-25-datenzoom.spec.ts:460` „behält Selektion und Hervorhebung bei maximaler
+   Vergrößerung": Der Kommentar über `DREI_FEATURES` nimmt an, „c" (4/2) bleibe nahe bei „a"
+   (3/3) im maximal hineingezoomten Fenster sichtbar. Der Feature-Agent hat anhand der
+   Zoomformel (PRD 7.3, `zoomAt` in `src/lib/store/viewport.ts`, unverändert aus dem bereits
+   gemergten F-25) vorgerechnet, dass der Fensterschwerpunkt bei 60 Radschritten auf denselben
+   Bildschirmpunkt durch die Center-Klemmung tatsächlich von (3,3) wegdriftet und „c" am Ende
+   real außerhalb des Fensters liegt — vor Bug A fiel das nie auf, weil ohnehin nichts
+   ausgeblendet wurde. Freigegeben: Der QA-Agent für Bug A verifiziert am laufenden Programm,
+   wo das Fenster nach dem in diesem Test tatsächlich ausgeführten Zoomvorgang real liegt, und
+   passt die Seed-Werte von „c" (oder ersatzweise die Zahl der Radschritte) so an, dass „c"
+   nachweisbar im tatsächlichen Endfenster liegt. Prüfabsicht (Selektion/Hervorhebung eines
+   weiterhin sichtbaren, abgedunkelten Features bleiben bei maximalem Zoom korrekt) bleibt
+   unverändert — nur die Zahlen, keine neue Zusicherung.
+2. `e2e/F-26-schaetzmodus.spec.ts:183` „Kernablauf...übersteht Neuladen": legt im Fenster
+   `[0, 22]` ein Feature mit `impact=42` an und erwartet sofortige Sichtbarkeit. `+page.svelte`
+   legt aber ausdrücklich fest, dass der Ausschnitt beim Wachsen von `domainMax` bewusst NICHT
+   automatisch zurückgesetzt wird — ein neu angelegtes Feature außerhalb des aktuellen Fensters
+   bleibt also erwartungsgemäß unsichtbar, bis manuell zurückgesetzt wird (genau der Fall, den
+   Bug A behebt). Freigegeben: vor der Sichtbarkeitsprüfung einen Klick auf „Ganze Karte zeigen"
+   einfügen. Prüfabsicht (Feature mit freiem Wert wird angelegt und übersteht ein Neuladen)
+   bleibt unverändert.
+
+Der QA-Agent für Bug A setzt beide Korrekturen um (Punkt 1 nach Live-Verifikation, Punkt 2
+mechanisch) und prüft danach die volle Suite erneut.
 
 ## Sessionprotokoll
 
