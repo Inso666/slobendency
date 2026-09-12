@@ -85,6 +85,21 @@ export function impactAtY(y: number, windowMin: number, windowMax: number): numb
 }
 
 /**
+ * Prüft, ob ein Aufwands- oder Nutzenwert innerhalb des sichtbaren Fensters
+ * [windowMin, windowMax] liegt (Bug A · Zoom-Clipping,
+ * https://github.com/Inso666/slobendency/issues/3, Abschnitt „Ursache"): xOf()/yOf() rechnen
+ * Werte linear und ungeklemmt in Bildschirmkoordinaten um, unabhängig davon, ob der Wert
+ * innerhalb des aktuell sichtbaren Fensters liegt — bislang fehlt an jeder Aufrufstelle
+ * (FeatureNodes.svelte, Edges.svelte) eine Sichtbarkeitsprüfung, die verhindert, dass ein
+ * Feature außerhalb des Fensters trotzdem über den Rand der Plotfläche hinausgeschoben
+ * dargestellt wird. Die Intervallgrenzen selbst zählen als sichtbar (Bug-Report, Grenzfall
+ * „Feature genau auf der Fensterkante bleibt sichtbar").
+ */
+export function isValueVisible(value: number, windowMin: number, windowMax: number): boolean {
+	throw new Error('not implemented');
+}
+
+/**
  * Liefert „schöne" Teilstrichwerte innerhalb des sichtbaren Fensters [windowMin, windowMax]
  * (F-25, Abschnitt „Umfang"). Der bisherige Fibonacci-Pfad aus F-08 (FIBONACCI-Werte ≤
  * windowMax, ergänzt um windowMax - 1 oberhalb von 22) bleibt für das volle Fenster
