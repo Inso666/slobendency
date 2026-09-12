@@ -374,7 +374,7 @@ stattdessen der Bug-Report/die Nutzerbeschreibung unten. Branchname `fix/<kurz>`
 
 | Bug | Zustand | Branch | Anmerkung |
 |---|---|---|---|
-| A — F-25 Datenzoom: Features verlassen die Plotfläche statt auszublenden | in QA | fix/f25-zoom-clipping | 575/575 Unit grün; 2 durch den Fix demaskierte Testannahmen gefunden und freigegeben, QA-Agent behebt |
+| A — F-25 Datenzoom: Features verlassen die Plotfläche statt auszublenden | fertig | — | gemergt 12.09. 20:45 |
 | B — F-24 Umschalter Abdunkeln/Ausblenden gehört ins Kopfband, links neben „Hervorhebung" (nicht ins Menü „Ansicht") | in QA | fix/f24-switch-platzierung | 569/569 Unit, 281/281 E2E grün |
 
 **Bug A** (12.09., vom Nutzer gemeldet). `xOf`/`yOf` (`src/lib/layout/scales.ts`) klemmen nicht
