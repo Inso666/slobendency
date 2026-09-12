@@ -75,12 +75,13 @@
 	(src/lib/store/mapStore.ts) angewandt statt auf `deleteFeature`.
 
 	F-24 · Hervorhebung: Abdunkeln oder Ausblenden (features/F-24-hervorhebung-sichtbarkeit.md, PRD
-	FR-47, Abschnitt 6.1): weiterer Umschalter im bereits bestehenden Menü „Ansicht", derselben
-	Bauart wie der Umschalter „Hervorhebung" im Kopfband (`role="group"`, Knöpfe mit `aria-pressed`,
-	gebunden an `highlightVisibility` aus src/lib/store/selection.ts) — festgelegt in
-	features/STATUS.md, Abschnitt „Entscheidungen des Orchestrators" (PRD 1.1, 11.09.): „Einstellungen
-	und der neue Sichtbarkeits-Umschalter hängen am bestehenden Menü Ansicht ▾ statt einer neuen
-	Symbolleisten-Schaltfläche."
+	FR-47, Abschnitt 6.1): Umschalter derselben Bauart wie „Hervorhebung" (`role="group"`, Knöpfe
+	mit `aria-pressed`, gebunden an `highlightVisibility` aus src/lib/store/selection.ts). Stand bis
+	11.09. im Menü „Ansicht" (features/STATUS.md, Abschnitt „Entscheidungen des Orchestrators", PRD
+	1.1, 11.09.); Bug B (features/STATUS.md, Abschnitt „Bekannte Fehler / Bugfixes", 12.09., wörtliche
+	Nutzeranweisung) ersetzt diese Festlegung ausdrücklich und verlangt den Umschalter direkt im
+	Kopfband, in `.scope` unmittelbar links neben dem bestehenden Umschalter „Hervorhebung" aus F-11
+	— kein Menü mehr, ohne jede Interaktion sichtbar.
 -->
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
@@ -516,28 +517,6 @@
 						<button type="button" aria-pressed={legendForced} onclick={toggleLegendForced}>
 							Zeichenerklärung
 						</button>
-						<!-- F-24, Abschnitt „Darstellung": „Zweiter, unabhängiger Umschalter
-							Abdunkeln/Ausblenden neben dem Umschalter nur direkte/transitiv aus F-11,
-							gleiche Bauart." Bleibt das Menü nach dem Umschalten offen — anders als bei
-							„Zeichenerklärung" oben — weil es sich, wie der Tafel-/Hintergrund-Umschalter im
-							Menü „Exportieren", um einen dauerhaften Schalter handelt, nicht um eine
-							einmalige Aktion. -->
-						<span class="sw" role="group" aria-label="Sichtbarkeit nicht beteiligter Elemente">
-							<button
-								type="button"
-								aria-pressed={$highlightVisibility === 'dim'}
-								onclick={() => highlightVisibility.set('dim')}
-							>
-								Abdunkeln
-							</button>
-							<button
-								type="button"
-								aria-pressed={$highlightVisibility === 'hide'}
-								onclick={() => highlightVisibility.set('hide')}
-							>
-								Ausblenden
-							</button>
-						</span>
 					</div>
 				{/if}
 			</div>
@@ -623,6 +602,31 @@
 			</div>
 		</div>
 		<div class="scope">
+			<!-- Bug B (features/STATUS.md, Abschnitt „Bekannte Fehler / Bugfixes", 12.09., wörtliche
+				Nutzeranweisung: „Der Schalter zur Auswahl zwischen Abdunkeln und Ausblenden sollte in
+				die Headerleiste links neben den Schalter für die Hervorhebung [stehen]."): Umschalter
+				aus F-24, unverändert in Bauart und Verhalten (`role="group"`, Knöpfe mit
+				`aria-pressed`, gebunden an `highlightVisibility`), verschoben aus dem Menü „Ansicht" an
+				diese Stelle — unmittelbar links neben dem bestehenden Umschalter „Hervorhebung". Ohne
+				eigenen `.lbl`, wie schon im Menü „Ansicht" zuvor — die Bauart bleibt unverändert. -->
+			<span class="scope-item">
+				<span class="sw" role="group" aria-label="Sichtbarkeit nicht beteiligter Elemente">
+					<button
+						type="button"
+						aria-pressed={$highlightVisibility === 'dim'}
+						onclick={() => highlightVisibility.set('dim')}
+					>
+						Abdunkeln
+					</button>
+					<button
+						type="button"
+						aria-pressed={$highlightVisibility === 'hide'}
+						onclick={() => highlightVisibility.set('hide')}
+					>
+						Ausblenden
+					</button>
+				</span>
+			</span>
 			<span class="scope-item">
 				<span class="lbl">Hervorhebung</span>
 				<span class="sw" role="group" aria-label="Hervorhebung">
