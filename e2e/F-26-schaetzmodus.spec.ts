@@ -198,6 +198,18 @@ test.describe('F-26 · Schätzmodus', () => {
 		await modal.getByRole('button', { name: 'Speichern' }).click();
 
 		await expect(page.getByRole('dialog')).toHaveCount(0);
+
+		// Bug A · QA (12.09., features/STATUS.md, Entscheidung „Zwei durch Bug A demaskierte
+		// Testannahmen"): impact=42 liegt außerhalb des Fensters [0, 22], mit dem dieser Test
+		// startet (domainMax wächst zwar durch das neue Feature auf 43, src/routes/+page.svelte
+		// setzt den Ausschnitt beim Wachsen von domainMax aber bewusst NICHT automatisch zurück —
+		// vor Bug A blieb das folgenlos, weil außerhalb des Fensters liegende Features über den
+		// Rand hinausgeschoben, aber nie ausgeblendet wurden). „Ganze Karte zeigen" stellt das
+		// volle, neue Fenster [0, domainMax] wieder her, wie es ein Blick auf die eigene Karte nach
+		// dem Anlegen eines Ausreißers ohnehin nahelegt. Prüfabsicht unverändert: ein mit freiem
+		// Wert angelegtes Feature übersteht ein Neuladen.
+		await page.getByRole('button', { name: 'Ansicht' }).click();
+		await page.getByRole('button', { name: 'Ganze Karte zeigen' }).click();
 		await expect(page.getByTestId('feature-node-freier-wert')).toBeVisible();
 
 		// F-04: Persistenz schreibt erst nach der Bündelungsfrist DEBOUNCE_MS (400 ms).
